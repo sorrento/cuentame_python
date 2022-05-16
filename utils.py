@@ -1,5 +1,6 @@
 import pandas as pd
 
+from u_base import get_now_format, inicia, tardado
 from u_io import lista_files_recursiva, fecha_mod, get_filename, lee_txt
 from u_textminig import get_candidatos_nombres_all, tf_idf_preprocessing
 
@@ -18,8 +19,13 @@ def seleccion_txt(path):
 
 
 def get_fake_authors(texto):
-    df = get_candidatos_nombres_all(texto)
-    return pick(df, 10, 2), df
+    """
+devuelve un nombre fake, hecho de la concatenación de dos nombres propios que aparecen en el texto
+    :param texto:
+    :return: también un df con la lista de los nombres propios y un diccionario con el conteo de todas las palabras
+    """
+    df_names, d_all = get_candidatos_nombres_all(texto)
+    return pick(df_names, 10, 2), df_names, d_all
 
 
 def get_fake_title(vector_matrix, vocab, i, l_authors=None):
@@ -75,15 +81,24 @@ def get_book_data(path):
 
 
 def get_book_summary(i, files, doc_list, vector_matrix, vocab):
+    """
+obtiene los autores fake y reales del libro (y título), ademoas de un diccionario con el conteo de las palabras
+    :param i:
+    :param files:
+    :param doc_list:
+    :param vector_matrix:
+    :param vocab:
+    :return:
+    """
     file = files[i]
     texto = doc_list[i]
 
     di = get_book_data(file)
 
     # print('\n\n*******', get_filename(file))
-    l_authors, df = get_fake_authors(texto)
+    l_authors, df_names, d_count = get_fake_authors(texto)
     fake_authors = ' '.join(l_authors)
-    nombres = list(df.head(20).index)
+    nombres = list(df_names.head(20).index)
 
     l_title = get_fake_title(vector_matrix, vocab, i, nombres)
     fake_title = ' '.join(l_title)
@@ -94,7 +109,7 @@ def get_book_summary(i, files, doc_list, vector_matrix, vocab):
     di['listo'] = False
     di['i'] = i
 
-    return di
+    return di, d_count
 
 
 def get_fakes(path):
@@ -104,6 +119,7 @@ han trnasformado en txt en el día más reciente
     :param path: ruta de la biblioteca calibre
     :return:
     """
+    t = inicia('Get fakes')
     files = seleccion_txt(path)
 
     doc_list = [lee_txt(x) for x in files]
@@ -122,9 +138,53 @@ han trnasformado en txt en el día más reciente
     vector_matrix, vocab, doc_freq = tf_idf_preprocessing(doc_list, params)
 
     di2 = {}
+    di_counts = {}
     for i in range(len(files)):
-        di = get_book_summary(i, files, doc_list, vector_matrix, vocab)
-        print(di)
+        di, di_count = get_book_summary(i, files, doc_list, vector_matrix, vocab)
+        # print(di)
         di2[i] = di
+        di_counts[i] = di_count
 
-    return di2
+    tardado(t)
+
+    return di2, di_counts
+
+
+def get_frecuencia_words(di_counts):
+    """
+genera un df con conteo de palabras de todos los libros del bunch
+    :param di_counts:
+    :return:
+    """
+    import pandas as pd
+    import numpy as np
+    from functools import reduce
+
+    l = list()
+    for i in di_counts.keys():
+        df = pd.DataFrame.from_dict(di_counts[i], orient='index').rename(columns={0: i})
+        l.append(df)
+
+    final_df = reduce(lambda left, right: left.join(right), l)
+    final_df = final_df.replace(np.nan, 0)
+
+    final_df['palabra'] = [x.lower() for x in final_df.index]
+    a = pd.melt(final_df, id_vars='palabra', value_name='count')
+
+    conteo = a.groupby('palabra').sum().sort_values('count', ascending=False)
+
+    return conteo
+
+
+def fichero_para_mathematica(dic_fake):
+    """
+genera el fichero que necesita mathematica
+    :param dic_fake:
+    :return:
+    """
+    oo = {dic_fake[k]['title']: {'titulo': dic_fake[k]['title'],
+                                 'author': dic_fake[k]['author'],
+                                 'path':   dic_fake[k]['path']} for k in dic_fake}
+    filename = get_now_format() + '_' + str(len(dic_fake)) + '.csv'
+
+    return pd.DataFrame.from_dict(oo, orient='index'), filename

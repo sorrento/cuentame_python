@@ -111,9 +111,9 @@ con parámetros extremos y salga una matriz muy grande
 
 def get_candidatos_nombres_all(texto):
     """
-la lista de posibles nombres propios, en un df con las veces que aparece en may y en total
+la lista de posibles nombres propios, en un df con las veces que aparece en mayúscula y en total
     :param texto:
-    :return:
+    :return: también devuelve un diccionario con el conteo de palabras
     """
     import re
     import collections
@@ -140,7 +140,7 @@ la lista de posibles nombres propios, en un df con las veces que aparece en may 
     r['ratio'] = r['n_may'] / r['N']
     r = r.sort_values('ratio', ascending=False)
 
-    return r[r.ratio > 0.8].sort_values('N', ascending=False)
+    return r[r.ratio > 0.8].sort_values('N', ascending=False), d_all
 
 
 def split(texto):
@@ -152,5 +152,5 @@ las que son mayúsculas (quizás sí se puede, no lo sé)
     """
     import re
     # s = texto.split()  # no las corta bien. deja guión inicial, y al final, puntos o comas
-    ss = re.split(r'[-,\.\s—¿\?!¡;:]\s*', texto)
+    ss = re.split(r'[-,\.\s—¿\?!¡;:…»\(\)”]\s*', texto)
     return ss
