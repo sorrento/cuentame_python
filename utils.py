@@ -1,7 +1,7 @@
 import pandas as pd
 
-from u_io import lista_files_recursiva, fecha_mod, get_filename
-from u_textminig import get_candidatos_nombres_all
+from u_io import lista_files_recursiva, fecha_mod, get_filename, lee_txt
+from u_textminig import get_candidatos_nombres_all, tf_idf_preprocessing
 
 
 def seleccion_txt(path):
@@ -19,7 +19,7 @@ def seleccion_txt(path):
 
 def get_fake_authors(texto):
     df = get_candidatos_nombres_all(texto)
-    return pick(df, 10, 2)
+    return pick(df, 10, 2), df
 
 
 def get_fake_title(vector_matrix, vocab, i, l_authors=None):
@@ -62,3 +62,69 @@ de un df, coge las top rows y selecciona n índices de acuerdo al peso dado por 
     l = list(np.random.choice(noms, n, False, pesos))
 
     return l
+
+
+def get_book_data(path):
+    import re
+    partes = re.split(r'[/\\]', path)
+
+    autor = partes[-3]
+    ti = re.sub(r' \(\d+\)$', '', partes[-2])
+
+    return {'author': autor, 'title': ti}
+
+
+def get_book_summary(i, files, doc_list, vector_matrix, vocab):
+    file = files[i]
+    texto = doc_list[i]
+
+    di = get_book_data(file)
+
+    # print('\n\n*******', get_filename(file))
+    l_authors, df = get_fake_authors(texto)
+    fake_authors = ' '.join(l_authors)
+    nombres = list(df.head(20).index)
+
+    l_title = get_fake_title(vector_matrix, vocab, i, nombres)
+    fake_title = ' '.join(l_title)
+
+    di['fake_author'] = fake_authors
+    di['fake_title'] = fake_title
+    di['path'] = file
+    di['listo'] = False
+    di['i'] = i
+
+    return di
+
+
+def get_fakes(path):
+    """
+genera un diccioario con el titulo, autor, titulo fake y autor fake para los libros de la biblioteca Calibre que se
+han trnasformado en txt en el día más reciente
+    :param path: ruta de la biblioteca calibre
+    :return:
+    """
+    files = seleccion_txt(path)
+
+    doc_list = [lee_txt(x) for x in files]
+
+    params = {
+        'tfidf_max_df':          .8,  # proporción de documentos. si lo bajamos quitamos los muy frecuentes
+        'tfidf_min_df':          .2,  # % de docs. Si lo subo quito palabras poco frecuentes
+        'tfidf_analyzer':        'word',
+        'tfidf_stop_words':      True,
+        'tfidf_ngram_range_min': 1,
+        'tfidf_ngram_range_max': 2,
+        'tfidf_strip_accents':   False,
+        'tfidf_num_keywords':    5
+    }
+
+    vector_matrix, vocab, doc_freq = tf_idf_preprocessing(doc_list, params)
+
+    di2 = {}
+    for i in range(len(files)):
+        di = get_book_summary(i, files, doc_list, vector_matrix, vocab)
+        print(di)
+        di2[i] = di
+
+    return di2
