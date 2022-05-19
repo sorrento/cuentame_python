@@ -3,9 +3,6 @@ import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
 
 
-# from Preprocess import vocab, split
-
-
 def tf_idf_preprocessing(doc_list, kwargs):
     """Tf-IDF vectorization of corpus
 

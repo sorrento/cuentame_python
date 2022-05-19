@@ -2,7 +2,7 @@ import pandas as pd
 
 from u_base import get_now_format, inicia, tardado
 from u_io import lista_files_recursiva, fecha_mod, get_filename, lee_txt
-from u_textminig import get_candidatos_nombres_all, tf_idf_preprocessing
+from u_textmining import get_candidatos_nombres_all, tf_idf_preprocessing
 
 
 def seleccion_txt(path):
