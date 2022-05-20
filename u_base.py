@@ -14,10 +14,10 @@ def make_folder(path):
 
 
 def inicia(texto):
-    now = time.time()
+    ahora = time.time()
     print('** Iniciando: {}'.format(texto))
 
-    return [now, texto]
+    return [ahora, texto]
 
 
 def tardado(lista: list):
@@ -80,3 +80,39 @@ transforma una lista anidada en una lista de componenetes únicos oredenados
     flat_list = list(chain(*lista))
 
     return sorted(list(set(flat_list)))
+
+
+def log10p(x):
+    """
+    equivalente a log1p pero en base 10, que tiene más sentido en dinero
+    :param x:
+    :return:
+    """
+    import numpy as np
+    return np.log10(x + 1)
+
+
+def abslog(x):
+    """
+    función logaritmica que incluye el 0, es espejo en negativos, y es "aproximadamente" base 10
+    :param x:
+    :return:
+    """
+    if x < 0:
+        y = -log10p(-x)
+    else:
+        y = log10p(x)
+    return y
+
+
+def save_df(df, path, name, save_index=False, append_size=True):
+    if append_size:
+        middle = '_' + str(round(df.shape[0] / 1000)) + 'k_' + str(df.shape[1])
+    else:
+        middle = ''
+
+    filename = path + name + middle + '.csv'
+    print('** Guardando dataset en {}'.format(filename))
+    df.to_csv(filename, index=save_index)
+
+    return filename

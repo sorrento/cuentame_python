@@ -1,3 +1,4 @@
+import string
 import numpy as np
 import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -151,3 +152,46 @@ las que son mayúsculas (quizás sí se puede, no lo sé)
     # s = texto.split()  # no las corta bien. deja guión inicial, y al final, puntos o comas
     ss = re.split(r'[-,\.\s—¿\?!¡;:…»\(\)”]\s*', texto)
     return ss
+
+def tf_idf_keywords(docs, vector_matrix, vocab, doc_freq, num_keywords):
+    """Obtain a list of keywords for each document based on the TF-IDF score.
+    For each document it return a list of tuples (word, freq), where word is
+    the keyword and freq is the number of occurrences in the document.
+
+    Parameters
+    ----------
+    docs : iterable
+        Iterable object that yields Document objects
+    vector_matrix : NumPy array
+        NumPy matrix with Tf-Idf values
+    vocab : dict
+        Dictionary [num. key] -> [keyword]
+    doc_freq : NumPy array
+        Document frequencies for each term
+    num_keywords : int
+        Max. number of keywords to be kept for each document
+
+    Returns
+    -------
+    List of Document objects
+    """
+    docs_to_update = []
+    # Obtain keywords from TfidfVectorizer
+    for doc, vect_text in zip(docs, vector_matrix):
+        vect_text = vect_text.todense().reshape((-1))
+        # Get terms with highest tf-idf score
+        pos = vect_text.argsort().tolist()[0][-num_keywords:][::-1]
+        # Covert to document-wise term frequency
+        vect_text = np.multiply(vect_text, doc_freq)
+        vect_text = vect_text[0, pos].tolist()[0]
+        # Convert to integer
+        vect_text = [int(np.round(score, 0)) for score in vect_text]
+        kw = list(zip(vocab[pos], vect_text))
+        # Filter numbers and empty occurrences
+        kw = [kw_pair for kw_pair in kw if kw_pair[1] > 0
+              and not kw_pair[0].translate(str.maketrans('', '', string.punctuation + ' ')) \
+            .isnumeric()]
+        doc.keywords = kw
+        docs_to_update.append(doc)
+
+    return docs_to_update
