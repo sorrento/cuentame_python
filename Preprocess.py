@@ -18,35 +18,34 @@
 
 # %load_ext autoreload
 # %autoreload 2
-from utils import get_fakes, get_frecuencia_words, fichero_para_mathematica
+from u_base import save_df
+from utils import get_fakes, get_frecuencia_words, fichero_para_mathematica, agrega_a_dicc, quita_numeros
 
 path_calibre = 'c:/Users/milen/Biblioteca de calibre/'
 
 dic_fake, di_counts = get_fakes(path_calibre)
 
+# # Update Diccionario
+
 conteo = get_frecuencia_words(di_counts)
-conteo
+dicc_file = agrega_a_dicc(conteo, 'data/diccionario.csv')
 
-df_mat, filename_mat= fichero_para_mathematica(dic_fake)
+dicc_file
 
-import pandas as pd
-dicc_file= pd.read_csv('data/diccionario.csv', sep=';')
+dicc_file = quita_numeros(dicc_file)
 
-dicc_file.head(50) # y el diccionario de inglés? (debería ser por separado)
+save_df(dicc_file, 'data', 'diccionario2.csv',True)
 
-# +
-# TODO QUITAR LOS NÚMEROS Y LAS PALABRAS QUE LLEVAN -
-# -
+aa=pd.read_csv('data/diccionario.csv', sep=';')
+aa.shape
 
-dicc_file['perc']=100*dicc_file['n.total']/dicc_file['n.total'].sum()
+aa=pd.read_csv('data/diccionario2.csv_81k_2.csv', sep=';')
+aa.shape
 
-dicc_file.head(50)
+dicc_file[dicc_file.n<4].sample(30)
 
-dicc_file[50:100]
+# # Fichero para Mathemtica
 
-# todo ctualizar fichero de diccionario
-
+df_mat, filename_mat = fichero_para_mathematica(dic_fake)
 
 # ## Get partes
-
-

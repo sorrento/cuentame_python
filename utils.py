@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 
 from u_base import get_now_format, inicia, tardado
@@ -168,10 +169,11 @@ genera un df con conteo de palabras de todos los libros del bunch
     final_df = reduce(lambda left, right: left.join(right), l)
     final_df = final_df.replace(np.nan, 0)
 
-    final_df['palabra'] = [x.lower() for x in final_df.index]
-    a = pd.melt(final_df, id_vars='palabra', value_name='count')
+    col_word = 'word'
+    final_df[col_word] = [x.lower() for x in final_df.index]
+    a = pd.melt(final_df, id_vars=col_word, value_name='count')
 
-    conteo = a.groupby('palabra').sum().sort_values('count', ascending=False)
+    conteo = a.groupby(col_word).sum().sort_values('count', ascending=False)
 
     return conteo
 
@@ -188,3 +190,35 @@ genera el fichero que necesita mathematica
     filename = get_now_format() + '_' + str(len(dic_fake)) + '.csv'
 
     return pd.DataFrame.from_dict(oo, orient='index'), filename
+
+
+def agrega_a_dicc(conteo, path='data/diccionario.csv'):
+    """
+lee el fichero de conteo de palabras y le agrega el nuevo
+    :param conteo:
+    :param path:
+    :return:
+    """
+    dicc_file = pd.read_csv(path, sep=';', index_col='word')
+    # y el diccionario de inglés? (debería ser por separado)
+    print('antes', dicc_file.shape)
+    res = conteo.join(dicc_file,how='outer').replace({np.nan: 0})
+    res['n'] = res['count'] + res['n.total']
+    res = res.sort_values('n', ascending=False)
+    res['r'] = np.arange(1, 0, -(1 / len(res)))
+    print('después:', res.shape)
+
+    return res[['n', 'r']]
+
+
+def quita_numeros(dicc_file):
+    """
+quita de un df de conteo de palabras, aquellas que en realidad son números
+    :param dicc_file:
+    :return:
+    """
+    print('antes:', dicc_file.shape)
+    lista = [x for x in dicc_file.index if not x.isdigit()]
+    res = dicc_file[dicc_file.index.isin(lista)]
+    print('después:', res.shape)
+    return res
