@@ -3,11 +3,11 @@ import pandas as pd
 
 from u_base import get_now_format, inicia, tardado
 from u_io import lista_files_recursiva, fecha_mod, get_filename, lee_txt
+from u_plots import plot_hist
 from u_textmining import get_candidatos_nombres_all, tf_idf_preprocessing
 
 
 def seleccion_txt(path):
-    import pandas as pd
     lista = lista_files_recursiva(path, 'txt')
     fechas = [fecha_mod(x) for x in lista]
     maxi = max(fechas)
@@ -113,7 +113,7 @@ obtiene los autores fake y reales del libro (y título), ademoas de un diccionar
     return di, d_count
 
 
-def get_fakes(path):
+def get_fakes(doc_list, files, vector_matrix, vocab):
     """
 genera un diccioario con el titulo, autor, titulo fake y autor fake para los libros de la biblioteca Calibre que se
 han trnasformado en txt en el día más reciente
@@ -121,22 +121,6 @@ han trnasformado en txt en el día más reciente
     :return:
     """
     t = inicia('Get fakes')
-    files = seleccion_txt(path)
-
-    doc_list = [lee_txt(x) for x in files]
-
-    params = {
-        'tfidf_max_df':          .8,  # proporción de documentos. si lo bajamos quitamos los muy frecuentes
-        'tfidf_min_df':          .2,  # % de docs. Si lo subo quito palabras poco frecuentes
-        'tfidf_analyzer':        'word',
-        'tfidf_stop_words':      True,
-        'tfidf_ngram_range_min': 1,
-        'tfidf_ngram_range_max': 2,
-        'tfidf_strip_accents':   False,
-        'tfidf_num_keywords':    5
-    }
-
-    vector_matrix, vocab, doc_freq = tf_idf_preprocessing(doc_list, params)
 
     di2 = {}
     di_counts = {}
@@ -149,6 +133,27 @@ han trnasformado en txt en el día más reciente
     tardado(t)
 
     return di2, di_counts
+
+
+def get_word_matrix(doc_list):
+    params = {
+        'tfidf_max_df':          .8,  # proporción de documentos. si lo bajamos quitamos los muy frecuentes
+        'tfidf_min_df':          .2,  # % de docs. Si lo subo quito palabras poco frecuentes
+        'tfidf_analyzer':        'word',
+        'tfidf_stop_words':      True,
+        'tfidf_ngram_range_min': 1,
+        'tfidf_ngram_range_max': 2,
+        'tfidf_strip_accents':   False,
+        'tfidf_num_keywords':    5
+    }
+    vector_matrix, vocab, doc_freq = tf_idf_preprocessing(doc_list, params)
+    return vector_matrix, vocab
+
+
+def get_books(path):
+    files = seleccion_txt(path)
+    doc_list = [lee_txt(x) for x in files]
+    return doc_list, files
 
 
 def get_frecuencia_words(di_counts):
@@ -202,7 +207,7 @@ lee el fichero de conteo de palabras y le agrega el nuevo
     dicc_file = pd.read_csv(path, sep=';', index_col='word')
     # y el diccionario de inglés? (debería ser por separado)
     print('antes', dicc_file.shape)
-    res = conteo.join(dicc_file,how='outer').replace({np.nan: 0})
+    res = conteo.join(dicc_file, how='outer').replace({np.nan: 0})
     res['n'] = res['count'] + res['n.total']
     res = res.sort_values('n', ascending=False)
     res['r'] = np.arange(1, 0, -(1 / len(res)))
@@ -222,3 +227,119 @@ quita de un df de conteo de palabras, aquellas que en realidad son números
     res = dicc_file[dicc_file.index.isin(lista)]
     print('después:', res.shape)
     return res
+
+
+def cabeza_y_cola(texto, n_row=100):
+    """
+muestra el principio y el final, para que podamos a ojo ver dónde empieza y termina realmente el libro
+    :param texto:
+    :param n_row:
+    :return:
+    """
+    from IPython.core.display import display
+    import re
+
+    partes = [x for x in re.split(r'\n', texto) if x != '']
+    df = pd.DataFrame({'i': range(len(partes)), 'parte': partes}).set_index('i')
+
+    pd.set_option('display.width', 10)
+    pd.set_option('display.max_colwidth', 150)
+    pd.set_option('display.max_rows', 100)
+
+    display(df.tail(n_row))
+    display(df.head(n_row))
+
+    return partes, df
+
+
+def corta(partes, df, ini, fin):
+    """
+corta el df y la lista con las partes usando los índices encontrados
+    :param partes:
+    :param df:
+    :param ini:
+    :param fin:
+    :return:
+    """
+    df = df[(df.index >= ini) & (df.index <= fin)].reset_index(drop=True)
+    df['len'] = df.parte.map(len)
+    partes = [partes[x] for x in range(ini, fin + 1)]
+    return partes, df
+
+
+def agrega(l, largo, g, n_new, i, d, partes):
+    agg(l, g, d, i, partes)
+    largo.append(n_new)
+
+    return g + 1, 0
+
+
+def agg(l, g, d, i, partes):
+    l.append(g)
+    #     print('largo l:',len(l))
+    if g in d:
+
+        ies = d[g]['ies']
+        ies.append(i)
+        textos = d[g]['texto']
+        textos.append(partes[i])
+
+    else:
+
+        d[g] = {'ies': [i]}
+        d[g]['texto'] = [partes[i]]
+
+
+def crea_capsulas(partes, df, lmin=1000, lmax=1500):
+    """
+iva uniendo las partes hasta juntarlas en capsulas de tamaño entre lmin y lmax. El resultado es un diccionario
+que tiene 'ies' (las i que une) y 'texto'. la key es índice de grupo g que parte en 1
+    :param partes:
+    :param df:
+    :param lmin:
+    :param lmax:
+    :return:
+    """
+    grupos = []  # lista de a qué grupo pertenece la fila del df
+    largos = []  # almacena los largos de las capsulas creadas
+    n_acc = 0 # acumulado de la suma de largos en la iteración
+    g = 1  # id de grupo
+    d = {}  # diccionario final que se entregará
+
+    for i in range(len(df)):
+        print('*****', i)
+        r = df.iloc[i]
+        n_new = r.len
+
+        n_fut = n_acc + n_new
+        print('******* nacc={} nnew={} nfut={}'.format(n_acc, n_new, n_fut))
+
+        q_cortos = n_fut <= lmin
+        q_largos = n_fut > lmax
+
+        if q_cortos:
+            #         print('  **cortos', n_fut)
+            agg(grupos, g, d, i, partes)
+            n_acc = n_fut
+        elif q_largos:
+            print('  ** >> pasamos', n_fut)
+            delta_abajo = lmin - n_acc
+            delta_arriba = n_fut - lmax
+            print('delta abajo: {}, delta arriba {} nacc {}  nnew{} nfut {}'.format(delta_abajo, delta_arriba, n_acc,
+                                                                                    n_new, n_fut))
+            if delta_abajo < delta_arriba:
+                print('>>preferimos quedarnos cortos')
+                g, n_acc = agrega(grupos, largos, g, n_acc, i, d, partes)
+                n_acc = n_new
+            else:
+                print('>>> preferimos pasarnos', n_fut)
+                g, n_acc = agrega(grupos, largos, g, n_fut, i, d, partes)
+
+        else:
+            print('***caemos dentro:', n_fut)
+            g, n_acc = agrega(grupos, largos, g, n_fut, i, d, partes)
+
+    df['capsula'] = grupos
+    plot_hist(largos, 45)
+
+    return d
