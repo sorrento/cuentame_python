@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from IPython.core.display import display
 
 from u_base import get_now_format, inicia, tardado
 from u_io import lista_files_recursiva, fecha_mod, get_filename, lee_txt
@@ -117,7 +118,10 @@ def get_fakes(doc_list, files, vector_matrix, vocab):
     """
 genera un diccioario con el titulo, autor, titulo fake y autor fake para los libros de la biblioteca Calibre que se
 han trnasformado en txt en el día más reciente
-    :param path: ruta de la biblioteca calibre
+    :param vocab:
+    :param vector_matrix:
+    :param files:
+    :param doc_list:
     :return:
     """
     t = inicia('Get fakes')
@@ -343,3 +347,25 @@ que tiene 'ies' (las i que une) y 'texto'. la key es índice de grupo g que part
     plot_hist(largos, 45)
 
     return d
+
+
+def crop(img, f, sx, sy):
+    width, height = img.size
+
+    # Setting the points for cropped image
+    left = sx
+    top = sy
+    right = width * f + left
+    bottom = width * f + top
+
+    im1 = img.crop((left, top, right, bottom))
+    print(im1.size)
+    display(im1)
+
+    return im1
+
+
+def get_image_path(file):
+    oo = file.split('\\')[:-1]
+    oo.append('cover.jpg')
+    return '/'.join(oo)

@@ -77,6 +77,7 @@ print(len(' '.join(d[i]['texto'])))
 ' '.join(d[i]['texto'])
 
 # # Conexión
+
 conf = read_json('data/config.json')
 db = get_db(conf['mdb_usr'], conf['mdb_passw'])
 c_lib, c_lib_sum = get_colls(db)
