@@ -19,6 +19,8 @@
 # %load_ext autoreload
 # %autoreload 2
 import pandas as pd
+
+from mongo import get_db, get_colls
 from u_base import save_df, save_json, read_json
 from utils import get_fakes, get_frecuencia_words, fichero_para_mathematica, agrega_a_dicc, quita_numeros, get_books, \
     get_word_matrix, cabeza_y_cola, corta, crea_capsulas
@@ -75,55 +77,15 @@ print(len(' '.join(d[i]['texto'])))
 ' '.join(d[i]['texto'])
 
 # # Conexión
-
-import pymongo
-
-# +
-
-jj = {
-    'mdb_passw': 'spidey',
-    'mdb_usr':   "mhalat"
-}
-save_json(jj, 'data/config.json')
-# -
-
-conf=read_json('data/config.json')
-
-mdb_passw = conf['mdb_passw']
-mdb_usr = conf['mdb_usr']
-
-def get_db(mdb_usr, mdb_passw):
-    if mdb_usr =='xxx':
-        print('debe configurar las credenciales de mongodb en fichero data/config.json.'
-              'esta información se encuentra en el panel de back4app por ejemplo')
-    cs = "mongodb+srv://" + mdb_usr + ":" + mdb_passw + "@cuentame.2tlxj.mongodb.net/"
-    client = pymongo.MongoClient(cs)
-    db = client.get_database('cuentame')
-    print('**test', db.list_collection_names())
-    return db
-
-
-db = get_db(mdb_passw)
-
-
-def get_colls(db):
-    col_libros_sum = db.get_collection('librosSum')
-    col_libros = db.get_collection('libros')
-    print('test: nlibros sum (count)', col_libros_sum.count_documents({}))
-    print('test libros, example:', col_libros_sum.find_one())
-
-    return col_libros, col_libros_sum
-
-
+conf = read_json('data/config.json')
+db = get_db(conf['mdb_usr'], conf['mdb_passw'])
 c_lib, c_lib_sum = get_colls(db)
 
+# ejemplo de inserción
 j2 = {'libroId': 999, 'nCapitulos': 999, 'title': 'fake', 'author': 'fake', 'fakeTitle': 'fake', 'fakeAuthor': 'fake',
       'idioma':  'es'}
 j3 = {'libroId': 888, 'nCapitulos': 999, 'title': 'fake', 'author': 'fake', 'fakeTitle': 'fake', 'fakeAuthor': 'fake',
       'idioma':  'es'}
-
 dics = [j2, j3]
-
 dics
-
-res = col_libros_sum.insert_many(dics)
+res = c_lib_sum.insert_many(dics)
