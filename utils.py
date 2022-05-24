@@ -105,11 +105,11 @@ obtiene los autores fake y reales del libro (y título), ademoas de un diccionar
     l_title = get_fake_title(vector_matrix, vocab, i, nombres)
     fake_title = ' '.join(l_title)
 
-    di['fake_author'] = fake_authors
-    di['fake_title'] = fake_title
-    di['path'] = file
-    di['listo'] = False
-    di['i'] = i
+    di["fakeAuthoro"] = fake_authors
+    di["fakeTitle"] = fake_title
+    di["path"] = file
+    di["listo"] = False
+    di["i"] = i
 
     return di, d_count
 
@@ -306,7 +306,7 @@ que tiene 'ies' (las i que une) y 'texto'. la key es índice de grupo g que part
     """
     grupos = []  # lista de a qué grupo pertenece la fila del df
     largos = []  # almacena los largos de las capsulas creadas
-    n_acc = 0 # acumulado de la suma de largos en la iteración
+    n_acc = 0  # acumulado de la suma de largos en la iteración
     g = 1  # id de grupo
     d = {}  # diccionario final que se entregará
 
@@ -369,3 +369,58 @@ def get_image_path(file):
     oo = file.split('\\')[:-1]
     oo.append('cover.jpg')
     return '/'.join(oo)
+
+
+import requests
+import json
+from secret_keys import *
+
+
+def get_headers():
+    return {
+        'X-Parse-Application-Id': X_PARSE_APPLICATION_ID,
+        'X-Parse-REST-API-Key':   X_PARSE_REST_API_KEY,
+        'Content-Type':           'application/json'
+    }
+
+
+def update_status(objectId):
+    url = "https://parseapi.back4app.com/classes/WordCorpus/" + objectId
+    payload = {'status': True}
+    header = get_headers()
+    response = requests.put(url, data=json.dumps(payload), headers=header)
+    print(response.text)
+    return response.status_code
+
+
+class Back4App():
+    def get_sentance(self):
+        header = get_headers()
+        url = "https://parseapi.back4app.com/classes/WordCorpus?where=%7B%22status%22%3Afalse%7D"
+        data = requests.get(url, headers=header)
+        print(data)
+        json_response = data.json()
+        print(json_response)
+        results = json_response['results'][0]
+        # for i in results['meaning']:
+        # print(i)
+
+        sentence = ("சொல் : %s \n பொருள் : %s" %
+                    (results['word'], results['meaning']))
+        update_status(results['objectId'])
+        tags = "\n#தினமொரு #தமிழ்_சொல்"
+        return sentence + tags
+
+
+def upload_lib_summary(j):
+    url = "https://parseapi.back4app.com/classes/librosSum/"
+
+    j.pop('path')
+    j.pop('listo')
+    j.pop('i')
+
+    v = str(j).replace('\'', '\"').encode('utf-8')
+    header = get_headers()
+    data = requests.post(url, data=v, headers=header)
+
+    print(data.json())

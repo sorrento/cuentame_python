@@ -31,6 +31,68 @@ doc_list, files = get_books(PATH_CALIBRE)
 vector_matrix, vocab = get_word_matrix(doc_list)
 dic_fake, di_counts = get_fakes(doc_list, files, vector_matrix, vocab)
 
+lang="ES"
+
+# ## para summary:
+
+dic_fake
+
+# # Fichero para Mathemtica
+
+df_mat, filename_mat = fichero_para_mathematica(dic_fake)
+
+df_mat
+
+# ## Get partes
+
+i_book = 6
+file = files[i_book]
+texto = doc_list[i_book]
+
+partes, df = cabeza_y_cola(texto, 30)
+
+ini = 25
+fin = 2946
+partes, df = corta(partes, df, ini, fin)
+
+d = crea_capsulas(partes, df)
+
+d[1]
+
+print(d[i_book])
+print(len(' '.join(d[i_book]['texto'])))
+
+' '.join(d[i_book]['texto'])
+
+len(d)
+
+id_free=999
+
+dic_fake[i_book]["nCapitulos"]=len(d)
+dic_fake[i_book]["idioma"]=lang
+dic_fake[i_book]["libroId"]=id_free
+
+dic_fake[i_book]
+
+save_json(dic_fake[i_book], 'data/summary_ex.json')
+
+dic_fake
+
+# # Conexión
+
+conf = read_json('data/config.json')
+db = get_db(conf['mdb_usr'], conf['mdb_passw'])
+c_lib, c_lib_sum = get_colls(db)
+
+# ejemplo de inserción
+j2 = {'libroId': 999, 'nCapitulos': 999, 'title': 'fake', 'author': 'fake', 'fakeTitle': 'fake', 'fakeAuthor': 'fake',
+      'idioma':  'es'}
+j3 = {'libroId': 888, 'nCapitulos': 999, 'title': 'fake', 'author': 'fake', 'fakeTitle': 'fake', 'fakeAuthor': 'fake',
+      'idioma':  'es'}
+dics = [j2, j3]
+dics
+res = c_lib_sum.insert_many(dics)
+
 # # Update Diccionario
 
 conteo = get_frecuencia_words(di_counts)
@@ -49,44 +111,3 @@ aa = pd.read_csv('data/diccionario2.csv_81k_2.csv', sep=';')
 aa.shape
 
 dicc_file[dicc_file.n < 4].sample(30)
-
-# # Fichero para Mathemtica
-
-df_mat, filename_mat = fichero_para_mathematica(dic_fake)
-
-# ## Get partes
-
-i = 6
-file = files[i]
-texto = doc_list[i]
-
-partes, df = cabeza_y_cola(texto, 30)
-
-ini = 25
-fin = 2946
-partes, df = corta(partes, df, ini, fin)
-
-d = crea_capsulas(partes, df)
-
-d[1]
-
-i = 17
-print(d[i])
-print(len(' '.join(d[i]['texto'])))
-
-' '.join(d[i]['texto'])
-
-# # Conexión
-
-conf = read_json('data/config.json')
-db = get_db(conf['mdb_usr'], conf['mdb_passw'])
-c_lib, c_lib_sum = get_colls(db)
-
-# ejemplo de inserción
-j2 = {'libroId': 999, 'nCapitulos': 999, 'title': 'fake', 'author': 'fake', 'fakeTitle': 'fake', 'fakeAuthor': 'fake',
-      'idioma':  'es'}
-j3 = {'libroId': 888, 'nCapitulos': 999, 'title': 'fake', 'author': 'fake', 'fakeTitle': 'fake', 'fakeAuthor': 'fake',
-      'idioma':  'es'}
-dics = [j2, j3]
-dics
-res = c_lib_sum.insert_many(dics)
