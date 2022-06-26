@@ -237,14 +237,11 @@ def cabeza_y_cola(texto, n_row=100):
     """
 muestra el principio y el final, para que podamos a ojo ver dónde empieza y termina realmente el libro
     :param texto:
-    :param n_row:
+    :param n_row: cuantas filas muestra
     :return:
     """
     from IPython.core.display import display
-    import re
-
-    partes = [x for x in re.split(r'\n', texto) if x != '']
-    df = pd.DataFrame({'i': range(len(partes)), 'parte': partes}).set_index('i')
+    partes, df = divide_texto(texto, r'\n')
 
     pd.set_option('display.width', 10)
     pd.set_option('display.max_colwidth', 150)
@@ -253,6 +250,14 @@ muestra el principio y el final, para que podamos a ojo ver dónde empieza y ter
     display(df.tail(n_row))
     display(df.head(n_row))
 
+    return partes, df
+
+
+def divide_texto(texto, pat):
+    import re
+    partes = [x for x in re.split(pat, texto) if x != '']
+    df = pd.DataFrame({'i': range(len(partes)), 'parte': partes}).set_index('i')
+    df['len'] = df.parte.map(len)
     return partes, df
 
 
@@ -266,7 +271,6 @@ corta el df y la lista con las partes usando los índices encontrados
     :return:
     """
     df = df[(df.index >= ini) & (df.index <= fin)].reset_index(drop=True)
-    df['len'] = df.parte.map(len)
     partes = [partes[x] for x in range(ini, fin + 1)]
     return partes, df
 
@@ -294,7 +298,7 @@ def agg(l, g, d, i, partes):
         d[g]['texto'] = [partes[i]]
 
 
-def crea_capsulas(partes, df, lmin=1000, lmax=1500):
+def crea_capsulas(partes, df, lmin=1000, lmax=1500, verbose=True):
     """
 iva uniendo las partes hasta juntarlas en capsulas de tamaño entre lmin y lmax. El resultado es un diccionario
 que tiene 'ies' (las i que une) y 'texto'. la key es índice de grupo g que parte en 1
@@ -311,12 +315,13 @@ que tiene 'ies' (las i que une) y 'texto'. la key es índice de grupo g que part
     d = {}  # diccionario final que se entregará
 
     for i in range(len(df)):
-        print('*****', i)
         r = df.iloc[i]
         n_new = r.len
 
         n_fut = n_acc + n_new
-        print('******* nacc={} nnew={} nfut={}'.format(n_acc, n_new, n_fut))
+        if verbose:
+            print('*****', i)
+            print('******* nacc={} nnew={} nfut={}'.format(n_acc, n_new, n_fut))
 
         q_cortos = n_fut <= lmin
         q_largos = n_fut > lmax
@@ -340,11 +345,11 @@ que tiene 'ies' (las i que une) y 'texto'. la key es índice de grupo g que part
                 g, n_acc = agrega(grupos, largos, g, n_fut, i, d, partes)
 
         else:
-            print('***caemos dentro:', n_fut)
+            if verbose: print('***caemos dentro:', n_fut)
             g, n_acc = agrega(grupos, largos, g, n_fut, i, d, partes)
 
     df['capsula'] = grupos
-    plot_hist(largos, 45)
+    if verbose: plot_hist(largos, 45)
 
     return d
 
@@ -424,3 +429,20 @@ def upload_lib_summary(j):
     data = requests.post(url, data=v, headers=header)
 
     print(data.json())
+
+
+def rompe_parrafo(la):
+    partes, df = divide_texto(la, r'\. ')
+    dd = crea_capsulas(partes, df, lmin=500, lmax=850, verbose=False)  # todo forzar que sea lo más grande posible
+    capsu = ['. '.join(dd[x]['texto']) for x in dd]
+    print('largos:', [len(x) for x in capsu])
+    return capsu
+
+
+def rompe_parr(df, i):
+    row = df[df.i == i]
+    la = row.parte.iloc[0]
+    capsu = rompe_parrafo(la)
+    les = [len(x) for x in capsu]
+    df2 = pd.DataFrame({'i': i, 'parte': capsu, 'ii': range(len(capsu)), 'len': les})
+    return df2
