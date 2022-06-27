@@ -4,11 +4,14 @@ import requests
 import json
 
 from IPython.core.display import display
+from IPython.lib.display import Audio
+
 from secret_keys import *
 
 from u_base import get_now_format, inicia, tardado, read_json
 from u_io import lista_files_recursiva, fecha_mod, get_filename, lee_txt
 from u_plots import plot_hist
+from u_text import numero_a_letras
 from u_textmining import get_candidatos_nombres_all, tf_idf_preprocessing
 
 
@@ -364,7 +367,6 @@ va uniendo las partes hasta juntarlas en capsulas antes de alcanzar el  lmax. El
 que tiene 'ies' (las i que une) y 'texto'. la key es índice de grupo g que parte en 1
     :param partes:
     :param df:
-    :param lmin:
     :param lmax:
     :return:
     """
@@ -442,7 +444,7 @@ def update_status(objectId):
     return response.status_code
 
 
-class Back4App():
+class Back4App:
     def get_sentance(self):
         header = get_headers()
         url = "https://parseapi.back4app.com/classes/WordCorpus?where=%7B%22status%22%3Afalse%7D"
@@ -516,3 +518,59 @@ def get_final_parrfs(df, LIM):
     partes = final.parte.to_list()
 
     return final, partes
+
+
+def guarda_wav(au, name, show=False):
+    no = name + '.wav'
+    print('Guardando ', no)
+    with open(no, 'wb') as f:
+        f.write(au.data)
+    if show:
+        display(au)
+
+
+def speakers_test(model, put_accent=True, sample_rate=48000, put_yo=True,
+                  txt='Formalmente, desde el Acuerdo Marco "Aurora" de 1953, los centros pertenecientes a la red '
+                      'mundial debían "trabajar en plena colaboración académica y humana, compartiendo los avances '
+                      'tanto en conocimientos fundamentales como en técnicas.'):
+    sps = [x for x in model.speakers if x != 'random']
+    for sp in sps:
+        print(sp)
+        audio = model.apply_tts(text=reemplaza_nums(txt),
+                                speaker=sp,
+                                sample_rate=sample_rate,
+                                put_accent=put_accent,
+                                put_yo=put_yo
+                                )
+        au = Audio(audio, rate=sample_rate)
+        guarda_wav(au, 'data_out/wav/test_' + sp, show=True)
+
+
+def lee(model, sample_rate=48000, put_accent=True, put_yo=True,
+        txt='Formalmente, desde el Acuerdo Marco "Aurora" de 1953, los centros pertenecientes a la red mundial debían '
+            '"trabajar en plena colaboración académica y humana, compartiendo los avances tanto en conocimientos '
+            'fundamentales como en técnicas.'):
+    audio = model.apply_tts(text=txt,
+                            speaker='es_1',
+                            sample_rate=sample_rate,
+                            put_accent=put_accent,
+                            put_yo=put_yo
+                            )
+    au = Audio(audio, rate=sample_rate)
+    # guarda_wav(au, 'te_' + sp)
+    return au
+
+
+def reemplaza_nums(new_string):
+    import re
+    # new_string = 'Rose67lilly78Jasmine228Tulip'
+    new_result = re.findall('[0-9]+', new_string)
+    if len(new_result) == 0:
+        return new_string
+
+    dic = {x: numero_a_letras(int(x)) for x in new_result}
+    for key, value in dic.items():
+        # Replace key character with value character in string
+        new_string = new_string.replace(key, value)
+
+    return new_string
