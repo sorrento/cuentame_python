@@ -1,8 +1,12 @@
 import numpy as np
 import pandas as pd
-from IPython.core.display import display
+import requests
+import json
 
-from u_base import get_now_format, inicia, tardado
+from IPython.core.display import display
+from secret_keys import *
+
+from u_base import get_now_format, inicia, tardado, read_json
 from u_io import lista_files_recursiva, fecha_mod, get_filename, lee_txt
 from u_plots import plot_hist
 from u_textmining import get_candidatos_nombres_all, tf_idf_preprocessing
@@ -283,17 +287,17 @@ def agrega(l, largo, g, n_new, i, d, partes):
 
 
 def agg(l, g, d, i, partes):
+    # lista de a qué grupo va
     l.append(g)
     #     print('largo l:',len(l))
-    if g in d:
 
+    # agregamos a diccionario
+    if g in d:
         ies = d[g]['ies']
         ies.append(i)
         textos = d[g]['texto']
         textos.append(partes[i])
-
     else:
-
         d[g] = {'ies': [i]}
         d[g]['texto'] = [partes[i]]
 
@@ -354,6 +358,51 @@ que tiene 'ies' (las i que une) y 'texto'. la key es índice de grupo g que part
     return d
 
 
+def crea_capsulas_max(partes, df, lmax=1000, verbose=True):
+    """
+va uniendo las partes hasta juntarlas en capsulas antes de alcanzar el  lmax. El resultado es un diccionario
+que tiene 'ies' (las i que une) y 'texto'. la key es índice de grupo g que parte en 1
+    :param partes:
+    :param df:
+    :param lmin:
+    :param lmax:
+    :return:
+    """
+    grupos = []  # lista de a qué grupo pertenece la fila del df
+    largos = []  # almacena los largos de las capsulas creadas
+    n_acc = 0  # acumulado de la suma de largos en la iteración
+    g = 1  # id de grupo
+    d = {}  # diccionario final que se entregará
+
+    for i in range(len(df)):
+        r = df.iloc[i]
+        n_new = r.len
+
+        n_fut = n_acc + n_new
+        if verbose:
+            print('*****', i)
+            print('******* nacc={} nnew={} nfut={}'.format(n_acc, n_new, n_fut))
+
+        q_largos = n_fut > lmax
+
+        if q_largos:
+            if verbose: print('  ** >> pasamos', n_fut)
+            largos.append(n_new)  # cerramos el anterior
+            g = g + 1
+            agg(grupos, g, d, i, partes)
+            n_acc = n_new
+        else:
+            agg(grupos, g, d, i, partes)
+            n_acc = n_fut
+
+    df['capsula'] = grupos
+    if verbose: plot_hist(largos, 45)
+
+    if verbose:
+        print('** Máximo largo: {}, mínimo: {}'.format(str(max(largos)), str(min(largos))))
+    return d
+
+
 def crop(img, f, sx, sy):
     width, height = img.size
 
@@ -374,11 +423,6 @@ def get_image_path(file):
     oo = file.split('\\')[:-1]
     oo.append('cover.jpg')
     return '/'.join(oo)
-
-
-import requests
-import json
-from secret_keys import *
 
 
 def get_headers():
@@ -431,18 +475,44 @@ def upload_lib_summary(j):
     print(data.json())
 
 
-def rompe_parrafo(la):
+def rompe_parrafo(la, lim):
     partes, df = divide_texto(la, r'\. ')
-    dd = crea_capsulas(partes, df, lmin=500, lmax=850, verbose=False)  # todo forzar que sea lo más grande posible
+    dd = crea_capsulas_max(partes, df, lmax=lim, verbose=False)
     capsu = ['. '.join(dd[x]['texto']) for x in dd]
     print('largos:', [len(x) for x in capsu])
     return capsu
 
 
-def rompe_parr(df, i):
+def rompe_parr(df, i, lim):
     row = df[df.i == i]
     la = row.parte.iloc[0]
-    capsu = rompe_parrafo(la)
+    # print('rompiendo parr ', str(i))
+    capsu = rompe_parrafo(la, lim)
     les = [len(x) for x in capsu]
     df2 = pd.DataFrame({'i': i, 'parte': capsu, 'ii': range(len(capsu)), 'len': les})
     return df2
+
+
+def get_parrafos(titu):
+    d_summaries = read_json('data/summary_ex.json')
+
+    di = d_summaries[titu]
+    texto = lee_txt(di['path'])
+    partes, df = divide_texto(texto, r'\n')
+    partes, df = corta(partes, df, di['min'], di['max'])
+    df = df.reset_index().rename(columns={'index': 'i'})
+    df['ii'] = 0  # para identificar dentro de un párrafo largo que romperemos
+
+    return df
+
+
+def get_final_parrfs(df, LIM):
+    ies = df[df.len > LIM].i.to_list()
+    df_base = df[~df.i.isin(ies)]
+    rotos = [rompe_parr(df, i, LIM) for i in ies]
+    final = pd.concat([pd.concat(rotos), df_base]).sort_values(['i', 'ii'])
+    final['i_old'] = final.i
+    final['i'] = range(len(final))
+    partes = final.parte.to_list()
+
+    return final, partes

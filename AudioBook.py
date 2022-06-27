@@ -18,57 +18,31 @@
 
 # %load_ext autoreload
 # %autoreload 2
-
 from u_base import read_json
-from u_io import lee_txt
-from utils import corta, crea_capsulas, divide_texto, rompe_parr
+from utils import crea_capsulas_max, get_parrafos, get_final_parrfs
 
-j = 'data/summary_ex.json'
-d_summaries = read_json(j)
-d_summaries
+LIM = 950  # largo de las cápsulas, límite de lo que puede leer el sinte
 
-# +
-titu = 'El planeta americano'
+# ## 1. Selección del libro
 
-di = d_summaries[titu]
-texto = lee_txt(di['path'])
-partes, df = divide_texto(texto, r'\n')
-partes, df = corta(partes, df, di['min'], di['max'])
-# -
+d_summaries = read_json('data/summary_ex.json')
+list(set(d_summaries.keys()))
 
-df = df.reset_index().rename(columns={'index': 'i'})
-df['ii'] = 0
-
+df = get_parrafos('El planeta americano')
 df
 
-lim = 1000
+# ## 2. Creación de cápsulas
 
-ies = df[df.len > lim].i.to_list()
-df_base = df[~df.i.isin(ies)]
-
-i = ies[0]
-df2 = rompe_parr(df, i)
-
-df2
-
-rotos=[rompe_parr(df, i) for i in ies]
-
-final=pd.concat([pd.concat(rotos), df_base]).sort_values(['i', 'ii'])
+final, partes = get_final_parrfs(df, LIM)
 final
 
-final['i_old']=final.i
+max(final.len.to_list())# todo, puede que haya alguno que sea grande y no tenga punto. Cor
 
-final.head()
+final[final.len>LIM]
 
-max(final.len.to_list())
+final[final.len>LIM].parte.iloc[0]
 
-partes=final.parte.to_list()
+d = crea_capsulas_max(partes, final, lmax=500, verbose=False)
+caps = ['.\n'.join(d[x]['texto']) for x in d]  # todo probar si sintetizador lee punto aparte
 
-#redefinimos la i
-final['i']=range(len(final))
-
-partes
-
-# # Crea capsulas
-
-d = crea_capsulas(partes, final, lmin=300, lmax=800)
+# ## 3. Creación de wav's base
