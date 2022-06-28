@@ -145,7 +145,7 @@ def leer_miles(numero):
         resultado = leer_centenas(millar)
     resultado = '%smil' % resultado
     if centena > 0:
-        resultado = '%s %s' % (resultado, leer_centenas(centena))
+        resultado = '%s%s' % (resultado, leer_centenas(centena))
     return resultado
 
 

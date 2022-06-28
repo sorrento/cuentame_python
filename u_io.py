@@ -51,7 +51,7 @@ obtiene el nombre del fichero desde el path completo
     return os.path.basename(path)
 
 
-def lee_txt(file_path):
+def txt_read(file_path):
     """
 lee fichero de texto
     :param file_path:
@@ -68,3 +68,9 @@ lee fichero de texto
         # close file
         text_file.close()
         return data
+
+
+def txt_write(file_path, txt):
+    text_file = open(file_path + '.txt', "w", encoding='utf-8')
+    text_file.write(txt)
+    text_file.close()

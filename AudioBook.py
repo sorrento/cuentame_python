@@ -18,18 +18,20 @@
 
 # %load_ext autoreload
 # %autoreload 2
-from u_base import read_json
-from utils import crea_capsulas_max, get_parrafos, get_final_parrfs, speakers_test, lee, reemplaza_nums
-from u_text import numero_a_letras
+from u_base import read_json,make_folder
+from u_io import txt_write
+from utils import crea_capsulas_max, get_parrafos, get_final_parrfs, speakers_test, wav_generator
 
 LIM = 950  # largo de las cápsulas, límite de lo que puede leer el sinte
 
 # ## 1. Selección del libro
+# Tiene que ser un libro ya procesado, así no tengo que cortar la cabeza y cola desde aquí
 
 d_summaries = read_json('data/summary_ex.json')
 list(set(d_summaries.keys()))
 
-df = get_parrafos('El planeta americano')
+titulo = 'El planeta americano'
+df = get_parrafos(titulo)
 df
 
 # ## 2. Creación de cápsulas
@@ -43,10 +45,14 @@ final[final.len > LIM]
 
 final[final.len > LIM].parte.iloc[0]
 
-d = crea_capsulas_max(partes, final, lmax=500, verbose=False)
+d = crea_capsulas_max(partes, final, lmax=LIM, verbose=False)
 caps = ['.\n'.join(d[x]['texto']) for x in d]  # todo probar si sintetizador lee punto aparte
 
+caps[12]
+
 # ## 3. Creación de wav's base
+
+# Atentos a si hay un modelo más moderno que `v3_es`
 
 # +
 import torch
@@ -71,8 +77,9 @@ model_id = 'v3_es'
 sample_rate = 48000
 put_accent = True
 put_yo = True
-# -
 
+# +
+# cargamos el modelo
 device = torch.device('cpu')  # or cuda, pero no me funciona
 
 model, example_text = torch.hub.load(repo_or_dir='snakers4/silero-models',
@@ -80,5 +87,19 @@ model, example_text = torch.hub.load(repo_or_dir='snakers4/silero-models',
                                      language=language,
                                      speaker=model_id)
 model.to(device)  # gpu or cpu
+# -
+
+# Atentos a si **aparecen nuevas voces**
 
 speakers_test(model)
+
+# ## a) generación de los wavs
+
+path = 'data_out/wav/' + titulo
+make_folder(path)
+
+# i = 0
+for i in range(0,3):
+    wav_generator(caps, 'es_1', i, path, model)
+
+len(caps)*9

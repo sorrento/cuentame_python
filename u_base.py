@@ -15,7 +15,7 @@ def make_folder(path):
 
 def inicia(texto):
     ahora = time.time()
-    print('** Iniciando: {}'.format(texto))
+    print('\n** Iniciando: {}'.format(texto))
 
     return [ahora, texto]
 

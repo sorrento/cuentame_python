@@ -8,7 +8,7 @@
 #       format_version: '1.5'
 #       jupytext_version: 1.13.7
 #   kernelspec:
-#     display_name: Python 3
+#     display_name: Python 3 (ipykernel)
 #     language: python
 #     name: python3
 # ---
@@ -23,7 +23,7 @@ import pandas as pd
 from mongo import get_db, get_colls
 from u_base import save_df, save_json, read_json
 from utils import get_fakes, get_frecuencia_words, fichero_para_mathematica, agrega_a_dicc, quita_numeros, get_books, \
-    get_word_matrix, cabeza_y_cola, corta, crea_capsulas
+    get_word_matrix, cabeza_y_cola, corta, crea_capsulas, rompe_parrafo
 
 PATH_CALIBRE = 'c:/Users/milen/Biblioteca de calibre/'
 
@@ -31,50 +31,71 @@ doc_list, files = get_books(PATH_CALIBRE)
 vector_matrix, vocab = get_word_matrix(doc_list)
 dic_fake, di_counts = get_fakes(doc_list, files, vector_matrix, vocab)
 
-lang="ES"
+lang = "ES"
 
 # ## para summary:
 
 dic_fake
 
-# # Fichero para Mathemtica
-
-df_mat, filename_mat = fichero_para_mathematica(dic_fake)
-
-df_mat
+# +
+# Fichero para Mathemtica
+# df_mat, filename_mat = fichero_para_mathematica(dic_fake)
+# -
 
 # ## Get partes
 
-i_book = 6
+i_book = 1
 file = files[i_book]
 texto = doc_list[i_book]
 
+texto
+
 partes, df = cabeza_y_cola(texto, 30)
 
-ini = 25
-fin = 2946
+# todo guardar esto en json, para no hacerlo de nuevo
+ini = 13
+fin = 386
 partes, df = corta(partes, df, ini, fin)
 
-d = crea_capsulas(partes, df)
+df
+
+la = partes[0]
+la
+
+
+capsu = rompe_parrafo(la)
+
+capsu
+
+d = crea_capsulas(partes, df, lmin=300, lmax=999)
 
 d[1]
 
-print(d[i_book])
-print(len(' '.join(d[i_book]['texto'])))
+d[2]
 
-' '.join(d[i_book]['texto'])
+[len(' '.join(d[x]['texto'])) for x in d]
 
 len(d)
 
-id_free=999
+id_free = 999
 
-dic_fake[i_book]["nCapitulos"]=len(d)
-dic_fake[i_book]["idioma"]=lang
-dic_fake[i_book]["libroId"]=id_free
+dic_fake[i_book]["nCapitulos"] = len(d)
+dic_fake[i_book]["min"] = ini
+dic_fake[i_book]["max"] = fin
+dic_fake[i_book]["idioma"] = lang
+dic_fake[i_book]["libroId"] = id_free
 
 dic_fake[i_book]
 
-save_json(dic_fake[i_book], 'data/summary_ex.json')
+d_summaries={}
+
+j = 'data/summary_ex.json'
+
+d_summaries = read_json(j)
+
+d_summaries[dic_fake[i_book]['title']]=dic_fake[i_book]
+
+save_json(d_summaries, j)
 
 dic_fake
 

@@ -9,7 +9,7 @@ from IPython.lib.display import Audio
 from secret_keys import *
 
 from u_base import get_now_format, inicia, tardado, read_json
-from u_io import lista_files_recursiva, fecha_mod, get_filename, lee_txt
+from u_io import lista_files_recursiva, fecha_mod, get_filename, txt_read, txt_write
 from u_plots import plot_hist
 from u_text import numero_a_letras
 from u_textmining import get_candidatos_nombres_all, tf_idf_preprocessing
@@ -163,7 +163,7 @@ def get_word_matrix(doc_list):
 
 def get_books(path):
     files = seleccion_txt(path)
-    doc_list = [lee_txt(x) for x in files]
+    doc_list = [txt_read(x) for x in files]
     return doc_list, files
 
 
@@ -261,6 +261,12 @@ muestra el principio y el final, para que podamos a ojo ver dónde empieza y ter
 
 
 def divide_texto(texto, pat):
+    """
+Separa el texto en cada apaarición del patrón.
+    :param texto:
+    :param pat:
+    :return:
+    """
     import re
     partes = [x for x in re.split(pat, texto) if x != '']
     df = pd.DataFrame({'i': range(len(partes)), 'parte': partes}).set_index('i')
@@ -480,7 +486,7 @@ def upload_lib_summary(j):
 def rompe_parrafo(la, lim):
     partes, df = divide_texto(la, r'\. ')
     dd = crea_capsulas_max(partes, df, lmax=lim, verbose=False)
-    capsu = ['. '.join(dd[x]['texto']) for x in dd]
+    capsu = ['. '.join(dd[x]['texto']) + '.' for x in dd]
     print('largos:', [len(x) for x in capsu])
     return capsu
 
@@ -499,7 +505,7 @@ def get_parrafos(titu):
     d_summaries = read_json('data/summary_ex.json')
 
     di = d_summaries[titu]
-    texto = lee_txt(di['path'])
+    texto = txt_read(di['path'])
     partes, df = divide_texto(texto, r'\n')
     partes, df = corta(partes, df, di['min'], di['max'])
     df = df.reset_index().rename(columns={'index': 'i'})
@@ -533,9 +539,10 @@ def speakers_test(model, put_accent=True, sample_rate=48000, put_yo=True,
                   txt='Formalmente, desde el Acuerdo Marco "Aurora" de 1953, los centros pertenecientes a la red '
                       'mundial debían "trabajar en plena colaboración académica y humana, compartiendo los avances '
                       'tanto en conocimientos fundamentales como en técnicas.'):
+    print(txt)
     sps = [x for x in model.speakers if x != 'random']
     for sp in sps:
-        print(sp)
+        # print(sp)
         audio = model.apply_tts(text=reemplaza_nums(txt),
                                 speaker=sp,
                                 sample_rate=sample_rate,
@@ -546,10 +553,10 @@ def speakers_test(model, put_accent=True, sample_rate=48000, put_yo=True,
         guarda_wav(au, 'data_out/wav/test_' + sp, show=True)
 
 
-def lee(model, sample_rate=48000, put_accent=True, put_yo=True,
+def lee(model,
         txt='Formalmente, desde el Acuerdo Marco "Aurora" de 1953, los centros pertenecientes a la red mundial debían '
             '"trabajar en plena colaboración académica y humana, compartiendo los avances tanto en conocimientos '
-            'fundamentales como en técnicas.'):
+            'fundamentales como en técnicas.', sample_rate=48000, put_accent=True, put_yo=True):
     audio = model.apply_tts(text=txt,
                             speaker='es_1',
                             sample_rate=sample_rate,
@@ -565,6 +572,7 @@ def reemplaza_nums(new_string):
     import re
     # new_string = 'Rose67lilly78Jasmine228Tulip'
     new_result = re.findall('[0-9]+', new_string)
+
     if len(new_result) == 0:
         return new_string
 
@@ -572,5 +580,27 @@ def reemplaza_nums(new_string):
     for key, value in dic.items():
         # Replace key character with value character in string
         new_string = new_string.replace(key, value)
-
     return new_string
+
+
+def wav_generator(caps, voz, i, path, model, write_txt=True,
+                  sample_rate=48000, put_accent=True, put_yo=True):
+    txt = caps[i]
+    t = inicia(' i = {}'.format(i))
+    print(txt[0:10])
+
+    name = str(i).zfill(4) + '_' + voz
+    path2 = path + '/' + name
+
+    audio = model.apply_tts(text=reemplaza_nums(txt),
+                            speaker=voz,
+                            sample_rate=sample_rate,
+                            put_accent=put_accent,
+                            put_yo=put_yo
+                            )
+    au = Audio(audio, rate=sample_rate)
+    guarda_wav(au, path2)
+    if write_txt:
+        txt_write(path2, txt)
+
+    tardado(t)
