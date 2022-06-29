@@ -18,9 +18,8 @@
 
 # %load_ext autoreload
 # %autoreload 2
-from u_base import read_json,make_folder
-from u_io import txt_write
-from utils import crea_capsulas_max, get_parrafos, get_final_parrfs, speakers_test, wav_generator
+from u_base import read_json, make_folder
+from utils import crea_capsulas_max, get_parrafos, get_final_parrfs, speakers_test, wav_generator, wav2mp3
 
 LIM = 950  # largo de las cápsulas, límite de lo que puede leer el sinte
 
@@ -99,7 +98,23 @@ path = 'data_out/wav/' + titulo
 make_folder(path)
 
 # i = 0
-for i in range(0,3):
+for i in range(0, 3):
     wav_generator(caps, 'es_1', i, path, model)
 
-len(caps)*9
+len(caps) * 9
+
+# # Paso a Mp3
+
+res = wav2mp3(titulo)
+
+# # 4 Unión de mp3's
+# unimos varios para tener unos más largos como capitulos
+#
+
+# +
+# 4.1 nombre de cada capítulo
+# -
+
+# ## next
+# 1. Unir mp3s (se requiere igual el ffmpeg (ver código en R), así que podemos reeditar la parte de crear mp3s
+# 2. generar las palabras carácterísticas de cada capítulo para poner como título

@@ -74,3 +74,21 @@ def txt_write(file_path, txt):
     text_file = open(file_path + '.txt', "w", encoding='utf-8')
     text_file.write(txt)
     text_file.close()
+
+
+def files_remove(path, ext, recur=False):
+    import os
+    import glob
+    # Get a list of all the file paths that ends with .txt from in specified directory
+    # fileList = glob.glob('C://Users/HP/Desktop/A plus topper/*.txt')
+    b = ''
+    if recur:
+        b = '/**'
+
+    fileList = glob.glob(path + b + '/*.' + ext)
+    # Iterate over the list of filepaths & remove each file.
+    for filePath in fileList:
+        try:
+            os.remove(filePath)
+        except Exception as e:
+            print("Error while deleting file : ", filePath)
