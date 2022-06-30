@@ -116,3 +116,14 @@ def save_df(df, path, name, save_index=False, append_size=True):
     df.to_csv(filename, index=save_index)
 
     return filename
+
+
+def win_exe(cmd):
+    import os
+    from sys import platform
+    print("**Executing in Windows shell:" + cmd)
+    if platform == 'win32':
+        cmd = cmd.replace('/','\\')
+    out = os.popen(cmd).read()
+    print('**OUT:{}'.format(out))
+    return out

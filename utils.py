@@ -587,7 +587,7 @@ def wav_generator(caps, voz, i, path, model, write_txt=True,
                   sample_rate=48000, put_accent=True, put_yo=True):
     txt = caps[i]
     t = inicia(' i = {}'.format(i))
-    print(txt[0:10])
+    print(txt[0:30])
 
     name = str(i).zfill(4) + '_' + voz
     path2 = path + '/' + name
