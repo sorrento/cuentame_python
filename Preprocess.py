@@ -23,7 +23,8 @@ import pandas as pd
 from mongo import get_db, get_colls
 from u_base import save_df, save_json, read_json
 from utils import get_fakes, get_frecuencia_words, fichero_para_mathematica, agrega_a_dicc, quita_numeros, get_books, \
-    get_word_matrix, cabeza_y_cola, corta, crea_capsulas, rompe_parrafo
+    cabeza_y_cola, corta, crea_capsulas, rompe_parrafo
+from u_textmining import get_word_matrix
 
 PATH_CALIBRE = 'c:/Users/milen/Biblioteca de calibre/'
 

@@ -70,6 +70,7 @@ def get_now_format(f="%Y%m%d"):
 def flatten(lista):
     """
 transforma una lista anidada en una lista de componenetes únicos oredenados
+OJO: SÓLO SI NO SE REPITEN ELEMENTOS
     :param lista:
     :return:
     """

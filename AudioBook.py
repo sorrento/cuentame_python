@@ -15,12 +15,16 @@
 
 # # Audiobook 
 # - Crea audiobooks (wav o mp3) con sintetizador
+#
+# **to do**
+# - verificar si es más rápido leer párraos cortos, sólo los puntos seguidos en el sintetizador
 
 # %load_ext autoreload
 # %autoreload 2
-from u_audio import wav2mp3
 from u_base import read_json, make_folder
-from utils import crea_capsulas_max, get_parrafos, get_final_parrfs, speakers_test, wav_generator
+from utils import crea_capsulas_max, get_parrafos, get_final_parrfs, speakers_test, wav_generator, get_df_capitulos, \
+    get_dic_capitulos
+from u_textmining import palabras_representativas
 
 LIM = 950  # largo de las cápsulas, límite de lo que puede leer el sinte
 
@@ -48,9 +52,42 @@ final[final.len > LIM].parte.iloc[0]
 d = crea_capsulas_max(partes, final, lmax=LIM, verbose=False)
 caps = ['.\n'.join(d[x]['texto']) for x in d]  # todo probar si sintetizador lee punto aparte
 
-caps[12]
+caps[12]  # las cápsulas son las que puede leer de una sola vez
 
-# ## 3. Creación de wav's base
+# # 2 Creación de la estrucutura de capítulos y cápsulas
+
+# - ruta_foto
+# - texto separado (para lectura)
+# - texto unido para ponern nombres y crear mp3 tag. 
+#
+# Una vez completo, se guarda. Luego se genera el audio, 
+# - ruta del mp3
+
+# TODO leer el fichero se summary
+# datos_gen = {'ruta_foto': path_foto,
+#              'libro':     fake_title,
+#              'author':    fake_author}
+
+df_caps = get_df_capitulos(caps)
+df_caps
+
+di_caps = get_dic_capitulos(df_caps)
+
+# ## 2.1 Descripción de cada capítulo
+
+capitulos = ['\n '.join(di_caps[cap]['capsulas']) for cap in di_caps]
+
+capitulos[0]
+
+capitulos_titles = palabras_representativas(capitulos)
+
+capitulos_titles
+
+# +
+#todo , poner el diccionario
+# -
+
+# # 3. Creación de wav's base
 
 # Atentos a si hay un modelo más moderno que `v3_es`
 
@@ -116,17 +153,14 @@ len(caps) * 9
 # Es posible hacerlo desde python, pero hay que instalar el ffmpeg y es un poco webiao
 from pydub import AudioSegment as qu
 
-
 # +
 # ver si me evito guardar el wav
 # -
 
 
-
-
 aa
 
-aa=AudioSegment.from_wav("data_out/wav/test_es_2.wav")
+aa = AudioSegment.from_wav("data_out/wav/test_es_2.wav")
 # pa='c:/Users/milen/Desktop/git/cuentame_python/data_out/sample.jpg'
 # pa='c:\\Users\\milen\\Desktop\\git\\cuentame_python\\data_out\\sample.jpg'
 # pa='data_out\\sample.jpg'
@@ -134,9 +168,9 @@ aa=AudioSegment.from_wav("data_out/wav/test_es_2.wav")
 pa = 'c:/Users/milen/Downloads/20220629_203445.jpg'
 # pa = 'c:/pina.png'
 
-tag = {'title':'micanc', 'artist':'yopisos'}
+tag = {'title': 'micanc', 'artist': 'yopisos'}
 
-uu = aa.export("data_out/wav/test_es_t9.mp3", format="mp3", id3v2_version='3',tags=tag, cover=pa).close() # funciona!
+uu = aa.export("data_out/wav/test_es_t9.mp3", format="mp3", id3v2_version='3', tags=tag, cover=pa).close()  # funciona!
 
 # +
 # uu = aa.export("data_out/wav/test_es_t11.mp3", format="mp3", id3v2_version='3', cover=pa).close() # NO funciona!
@@ -156,16 +190,16 @@ uu = aa.export("data_out/wav/test_es_t9.mp3", format="mp3", id3v2_version='3',ta
 
 # simplemente es unir los aufios en un alistay hacer lista.export(...,format='xx')
 
-a1=qu.from_wav('data_out/wav/El planeta americano/0000_es_1.wav')
-a2=qu.from_wav('data_out/wav/El planeta americano/0001_es_1.wav')
+a1 = qu.from_wav('data_out/wav/El planeta americano/0000_es_1.wav')
+a2 = qu.from_wav('data_out/wav/El planeta americano/0001_es_1.wav')
 
 a1
 
 a2
 
-tag = {'title':'micanc', 'artist':'yopisos'}
-pa='c:/Users/milen/Desktop/git/cuentame_python/data_out/sample.jpg'
-(a1+ a2).export("data_out/wav/combined.mp3", format="mp3", id3v2_version='3',tags=tag, cover=pa).close() 
+tag = {'title': 'micanc', 'artist': 'yopisos'}
+pa = 'c:/Users/milen/Desktop/git/cuentame_python/data_out/sample.jpg'
+(a1 + a2).export("data_out/wav/combined.mp3", format="mp3", id3v2_version='3', tags=tag, cover=pa).close()
 
 # +
 # 4.1 nombre de cada capítulo

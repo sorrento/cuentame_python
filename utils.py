@@ -12,7 +12,7 @@ from u_base import get_now_format, inicia, tardado, read_json
 from u_io import lista_files_recursiva, fecha_mod, get_filename, txt_read, txt_write
 from u_plots import plot_hist
 from u_text import numero_a_letras
-from u_textmining import get_candidatos_nombres_all, tf_idf_preprocessing
+from u_textmining import get_candidatos_nombres_all, pick
 
 
 def seleccion_txt(path):
@@ -59,26 +59,6 @@ genera un título de 3 palabras con las palabras más representivas del texto
     return pick(ejj2, 15, 3, 'value')
 
 
-def pick(df, top, n, var_peso='N'):
-    """
-de un df, coge las top rows y selecciona n índices de acuerdo al peso dado por la columna var_peso
-    :param df:
-    :param top:
-    :param n:
-    :param var_peso:
-    :return:
-    """
-    import numpy as np
-
-    df = df.head(top)
-    noms = [x.capitalize() for x in df.index]
-    #     random.choices(noms, weights=nombres.N,k=3) no puedo hacer sin reemplazo
-    pesos = df[var_peso] / sum(df[var_peso])
-    l = list(np.random.choice(noms, n, False, pesos))
-
-    return l
-
-
 def get_book_data(path):
     import re
     partes = re.split(r'[/\\]', path)
@@ -112,7 +92,7 @@ obtiene los autores fake y reales del libro (y título), ademoas de un diccionar
     l_title = get_fake_title(vector_matrix, vocab, i, nombres)
     fake_title = ' '.join(l_title)
 
-    di["fakeAuthoro"] = fake_authors
+    di["fakeAuthor"] = fake_authors
     di["fakeTitle"] = fake_title
     di["path"] = file
     di["listo"] = False
@@ -144,21 +124,6 @@ han trnasformado en txt en el día más reciente
     tardado(t)
 
     return di2, di_counts
-
-
-def get_word_matrix(doc_list):
-    params = {
-        'tfidf_max_df':          .8,  # proporción de documentos. si lo bajamos quitamos los muy frecuentes
-        'tfidf_min_df':          .2,  # % de docs. Si lo subo quito palabras poco frecuentes
-        'tfidf_analyzer':        'word',
-        'tfidf_stop_words':      True,
-        'tfidf_ngram_range_min': 1,
-        'tfidf_ngram_range_max': 2,
-        'tfidf_strip_accents':   False,
-        'tfidf_num_keywords':    5
-    }
-    vector_matrix, vocab, doc_freq = tf_idf_preprocessing(doc_list, params)
-    return vector_matrix, vocab
 
 
 def get_books(path):
@@ -604,3 +569,43 @@ def wav_generator(caps, voz, i, path, model, write_txt=True,
         txt_write(path2, txt)
 
     tardado(t)
+
+
+def get_largo_capitulos(ll, n_caps=25):
+    """
+ distribución de cápsulas por capítulo
+    :param ll:
+    :param n_caps:
+    :return:
+    """
+    nn = ll // n_caps
+    kk = ll - (25 * nn)  # estos los distribuimos
+    res = sorted([(nn + (1 if x < kk else 0)) for x in range(n_caps)])
+
+    print('Check ok: ', sum(np.array(res)) == ll)
+    return res
+
+
+def get_df_capitulos(caps):
+    def repe(x, n):
+        return [x for i in range(n)]
+
+    res = get_largo_capitulos(len(caps))
+    r2 = [repe(i + 1, n) for i, n in zip(range(len(res)), res)]
+    flat_list = [item for sublist in r2 for item in sublist]
+    df_b = pd.DataFrame({'i_caps': range(len(caps)), 'capitulo': flat_list, 'txt': caps})
+
+    return df_b
+
+
+def get_dic_capitulos(df_caps):
+    dd = {}
+    for i, r in df_caps.iterrows():
+        cap = r.capitulo
+        u = r.txt
+        if cap in dd:
+            dd[cap]['capsulas'] = dd[cap]['capsulas'] + [u]
+        else:
+            dii = {'capsulas': [u]}
+            dd[cap] = dii
+    return dd

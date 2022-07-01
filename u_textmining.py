@@ -196,3 +196,58 @@ def tf_idf_keywords(docs, vector_matrix, vocab, doc_freq, num_keywords):
         docs_to_update.append(doc)
 
     return docs_to_update
+
+
+def pick(df, top, n, var_peso='N'):
+    """
+de un df, coge las top rows y selecciona n índices de acuerdo al peso dado por la columna var_peso
+    :param df:
+    :param top:
+    :param n:
+    :param var_peso:
+    :return:
+    """
+
+    df = df.head(top)
+    noms = [x.capitalize() for x in df.index]
+    #     random.choices(noms, weights=nombres.N,k=3) no puedo hacer sin reemplazo
+    pesos = df[var_peso] / sum(df[var_peso])
+    l = list(np.random.choice(noms, n, False, pesos))
+
+    return l
+
+
+def palabras_representativas(lista, n_best=3, n_pick=3):
+    """
+Forma lista de strings, con las n_pick palabras más representativas de cada texto. Escoge n_pick aleatoriamente
+de las n_best
+    :param lista: lista con textos
+    :param n_best:
+    :param n_pick:
+    :return:
+    """
+    import pandas as pd
+    vector_matrix, vocab = get_word_matrix(lista)
+
+    def oo(i, n_best, n_pick):
+        ej = pd.melt(pd.DataFrame(vector_matrix[i, :].todense(), columns=vocab))
+        ejj = ej.sort_values('value', ascending=False).set_index('variable')  # preparamos para la funcion pick
+
+        return ' '.join(pick(ejj, n_best, n_pick, 'value'))
+
+    return [oo(i, n_best, n_pick) for i in range(len(lista))]
+
+
+def get_word_matrix(doc_list):
+    params = {
+        'tfidf_max_df':          .8,  # proporción de documentos. si lo bajamos quitamos los muy frecuentes
+        'tfidf_min_df':          .2,  # % de docs. Si lo subo quito palabras poco frecuentes
+        'tfidf_analyzer':        'word',
+        'tfidf_stop_words':      True,
+        'tfidf_ngram_range_min': 1,
+        'tfidf_ngram_range_max': 2,
+        'tfidf_strip_accents':   False,
+        'tfidf_num_keywords':    5
+    }
+    vector_matrix, vocab, doc_freq = tf_idf_preprocessing(doc_list, params)
+    return vector_matrix, vocab
