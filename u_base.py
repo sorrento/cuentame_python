@@ -9,6 +9,7 @@ def make_folder(path):
             os.mkdir(path)
         else:
             print('Ya existe: {}'.format(path))
+        return path + '/'
     except OSError:
         print('Ha fallado la creación de la carpeta %s' % path)
 
@@ -29,7 +30,7 @@ def tardado(lista: list):
     return elapsed
 
 
-def save_json(dic, path, datos_desc=''):
+def json_save(dic, path, datos_desc=''):
     """
 
     :param dic:
@@ -42,10 +43,14 @@ def save_json(dic, path, datos_desc=''):
         json.dump(dic, outfile, ensure_ascii=False)
 
 
-def read_json(json_file):
+def json_read(json_file, keys_as_integer=False):
     import json
     with open(json_file, encoding="utf-8") as in_file:
         data = json.load(in_file)
+
+    if keys_as_integer:
+        data = {int(x) if x.isdigit() else x: data[x] for x in data.keys()}
+
     return data
 
 
@@ -124,7 +129,7 @@ def win_exe(cmd):
     from sys import platform
     print("**Executing in Windows shell:" + cmd)
     if platform == 'win32':
-        cmd = cmd.replace('/','\\')
+        cmd = cmd.replace('/', '\\')
     out = os.popen(cmd).read()
     print('**OUT:{}'.format(out))
     return out

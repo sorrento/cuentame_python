@@ -21,7 +21,7 @@
 import pandas as pd
 
 from mongo import get_db, get_colls
-from u_base import save_df, save_json, read_json
+from u_base import save_df, json_save, json_read
 from utils import get_fakes, get_frecuencia_words, fichero_para_mathematica, agrega_a_dicc, quita_numeros, get_books, \
     cabeza_y_cola, corta, crea_capsulas, rompe_parrafo
 from u_textmining import get_word_matrix
@@ -92,17 +92,17 @@ d_summaries={}
 
 j = 'data/summary_ex.json'
 
-d_summaries = read_json(j)
+d_summaries = json_read(j)
 
 d_summaries[dic_fake[i_book]['title']]=dic_fake[i_book]
 
-save_json(d_summaries, j)
+json_save(d_summaries, j)
 
 dic_fake
 
 # # Conexión
 
-conf = read_json('data/config.json')
+conf = json_read('data/config.json')
 db = get_db(conf['mdb_usr'], conf['mdb_passw'])
 c_lib, c_lib_sum = get_colls(db)
 

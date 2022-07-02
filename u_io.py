@@ -31,6 +31,10 @@ de modificación
     return lista
 
 
+def remove_extension(filename):
+    return '.'.join(filename.split('.')[:-1])
+
+
 def fecha_mod(file):
     """
 entrega la fecha de modificación de un archivo como un número yyyymmdd
@@ -42,13 +46,17 @@ entrega la fecha de modificación de un archivo como un número yyyymmdd
     return int(dt.strftime('%Y%m%d'))
 
 
-def get_filename(path):
+def get_filename(path, remove_ext=False):
     """
 obtiene el nombre del fichero desde el path completo
+    :param remove_ext: quitar la extension
     :param path:
     :return:
     """
-    return os.path.basename(path)
+    file = os.path.basename(path)
+    if remove_ext:
+        file = remove_extension(file)
+    return file
 
 
 def txt_read(file_path):
@@ -71,7 +79,9 @@ lee fichero de texto
 
 
 def txt_write(file_path, txt):
-    text_file = open(file_path + '.txt', "w", encoding='utf-8')
+    txt_ = file_path + '.txt'
+    print('**Guardando ', txt_)
+    text_file = open(txt_, "w", encoding='utf-8')
     text_file.write(txt)
     text_file.close()
 

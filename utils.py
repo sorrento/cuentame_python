@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import pandas as pd
 import requests
@@ -5,10 +6,11 @@ import json
 
 from IPython.core.display import display
 from IPython.lib.display import Audio
+from pydub import AudioSegment
+from AudioBook import titulo, path_book, model
 
 from secret_keys import *
-
-from u_base import get_now_format, inicia, tardado, read_json
+from u_base import get_now_format, inicia, tardado, json_read, make_folder
 from u_io import lista_files_recursiva, fecha_mod, get_filename, txt_read, txt_write
 from u_plots import plot_hist
 from u_text import numero_a_letras
@@ -376,22 +378,6 @@ que tiene 'ies' (las i que une) y 'texto'. la key es índice de grupo g que part
     return d
 
 
-def crop(img, f, sx, sy):
-    width, height = img.size
-
-    # Setting the points for cropped image
-    left = sx
-    top = sy
-    right = width * f + left
-    bottom = width * f + top
-
-    im1 = img.crop((left, top, right, bottom))
-    print(im1.size)
-    display(im1)
-
-    return im1
-
-
 def get_image_path(file):
     oo = file.split('\\')[:-1]
     oo.append('cover.jpg')
@@ -467,7 +453,7 @@ def rompe_parr(df, i, lim):
 
 
 def get_parrafos(titu):
-    d_summaries = read_json('data/summary_ex.json')
+    d_summaries = json_read('data/summary_ex.json')
 
     di = d_summaries[titu]
     texto = txt_read(di['path'])
@@ -491,13 +477,33 @@ def get_final_parrfs(df, LIM):
     return final, partes
 
 
-def guarda_wav(au, name, show=False):
-    no = name + '.wav'
+def audio_save(au, name, path, mp3=True, show=False, tag=None):
+    tem = 'temp.wav'
+    wa = None
+    if mp3:
+        ext = '.mp3'
+    else:
+        ext = '.wav'
+
+    no = path + '/' + name + ext
     print('Guardando ', no)
-    with open(no, 'wb') as f:
-        f.write(au.data)
+
+    if mp3:
+        with open(tem, 'wb') as f:
+            f.write(au.data)
+
+        wa = AudioSegment.from_wav(tem)
+        # wa.export(no, format="mp3", tags=tag).close()
+        wa.export(no, format="mp3").close()
+        os.remove(tem)
+    else:
+        with open(no, 'wb') as f:
+            f.write(au.data)
+
     if show:
         display(au)
+
+    return wa
 
 
 def speakers_test(model, put_accent=True, sample_rate=48000, put_yo=True,
@@ -515,7 +521,9 @@ def speakers_test(model, put_accent=True, sample_rate=48000, put_yo=True,
                                 put_yo=put_yo
                                 )
         au = Audio(audio, rate=sample_rate)
-        guarda_wav(au, 'data_out/wav/test_' + sp, show=True)
+
+        tag = {'title': 'Voice Test: ' + sp, 'artist': sp}
+        audio_save(au, 'data_out/wav/test_' + sp, show=True, tag=tag)
 
 
 def lee(model,
@@ -548,15 +556,12 @@ def reemplaza_nums(new_string):
     return new_string
 
 
-def wav_generator(caps, voz, i, path, model, write_txt=True,
+def wav_generator(txt, voz, i_cap, path, model, write_txt=True,
                   sample_rate=48000, put_accent=True, put_yo=True):
-    txt = caps[i]
-    t = inicia(' i = {}'.format(i))
+    t = inicia(' i = {}'.format(i_cap))
     print(txt[0:30])
 
-    name = str(i).zfill(4) + '_' + voz
-    path2 = path + '/' + name
-
+    name = str(i_cap).zfill(4) + '_' + voz
     audio = model.apply_tts(text=reemplaza_nums(txt),
                             speaker=voz,
                             sample_rate=sample_rate,
@@ -564,11 +569,14 @@ def wav_generator(caps, voz, i, path, model, write_txt=True,
                             put_yo=put_yo
                             )
     au = Audio(audio, rate=sample_rate)
-    guarda_wav(au, path2)
+    au_seg = audio_save(au, name, path)
+
     if write_txt:
-        txt_write(path2, txt)
+        txt_write(path + '/' + name, txt)
 
     tardado(t)
+
+    return au_seg
 
 
 def get_largo_capitulos(ll, n_caps=25):
@@ -599,13 +607,67 @@ def get_df_capitulos(caps):
 
 
 def get_dic_capitulos(df_caps):
+    key = 'capsulas'
     dd = {}
     for i, r in df_caps.iterrows():
         cap = r.capitulo
         u = r.txt
         if cap in dd:
-            dd[cap]['capsulas'] = dd[cap]['capsulas'] + [u]
+            dd[cap][key] = dd[cap][key] + [u]
         else:
-            dii = {'capsulas': [u]}
+            dii = {key: [u]}
             dd[cap] = dii
     return dd
+
+
+def update_di_capi(di_caps, capitulos_titles, d_summaries, titulo):
+    for i, e in enumerate(capitulos_titles):
+        i_ = i + 1
+        uu = di_caps[i_]
+        gen = d_summaries[titulo]
+
+        uu['song'] = str(i_) + '. ' + e
+        uu['album'] = gen['fakeTitle']
+        uu['singer'] = gen['fakeAuthoro']  # todo cambiar
+        uu['path_cover'] = 'data_out/images/hi/' + titulo + '.jpg'
+        uu['mp3_name'] = str(i_).zfill(2) + ' - ' + e + '.mp3'
+
+
+def get_mp3_tag(dd, i_cap, titulo):
+    tag = {'title':       dd['song'], 'artist': dd['singer'], 'album': dd['album'],
+           'Track':       i_cap,
+           'Genre':       'Ebook',
+
+           # estos los identifica el picard
+           'Date':        '07/07/2021',
+           'Subtitle':    'subtitulo',
+           'language':    dd['lan'],
+           'Comment':     'comm',
+
+           'year':        '2023',
+           'Description': 'DESCIPTION',
+           'releasetime': '07/07/2021',
+           'origyear':    '07/07/2021'
+           }
+
+    pa = 'data_out/images/hi/{}.jpg'.format(titulo)
+
+    return tag, pa
+
+
+def procesa_capitulo(j, i_cap):
+    dd = j[i_cap]
+
+    dd['lan'] = 'ES'  # todo tiene que venir
+    tag, img_path = get_mp3_tag(dd, i_cap, titulo)
+
+    t = inicia('Sintentizando cap {}'.format(dd['mp3_name']))
+    path_ch = make_folder(path_book + str(i_cap).zfill(2))
+    au_acc = AudioSegment.silent(100)
+    for k in range(len(dd['capsulas'][:3])):
+        cap = dd['capsulas'][k]
+        au_capsula = wav_generator(cap[:100], 'es_1', k, path_ch, model)
+        au_acc = au_acc + au_capsula + AudioSegment.silent(300)
+    au_acc.export(path_book + dd['mp3_name'], format="mp3", id3v2_version='3',
+                  tags=tag, cover=img_path).close()
+    tardado(t)

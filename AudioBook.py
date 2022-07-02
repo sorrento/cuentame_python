@@ -21,9 +21,10 @@
 
 # %load_ext autoreload
 # %autoreload 2
-from u_base import read_json, make_folder
-from utils import crea_capsulas_max, get_parrafos, get_final_parrfs, speakers_test, wav_generator, get_df_capitulos, \
-    get_dic_capitulos
+
+from u_base import json_read, json_save, make_folder
+from utils import crea_capsulas_max, get_parrafos, get_final_parrfs, speakers_test, get_df_capitulos, \
+    get_dic_capitulos, update_di_capi, procesa_capitulo
 from u_textmining import palabras_representativas
 
 LIM = 950  # largo de las cápsulas, límite de lo que puede leer el sinte
@@ -31,8 +32,10 @@ LIM = 950  # largo de las cápsulas, límite de lo que puede leer el sinte
 # ## 1. Selección del libro
 # Tiene que ser un libro ya procesado, así no tengo que cortar la cabeza y cola desde aquí
 
-d_summaries = read_json('data/summary_ex.json')
+d_summaries = json_read('data/summary_ex.json')
 list(set(d_summaries.keys()))
+
+d_summaries
 
 titulo = 'El planeta americano'
 df = get_parrafos(titulo)
@@ -54,20 +57,6 @@ caps = ['.\n'.join(d[x]['texto']) for x in d]  # todo probar si sintetizador lee
 
 caps[12]  # las cápsulas son las que puede leer de una sola vez
 
-# # 2 Creación de la estrucutura de capítulos y cápsulas
-
-# - ruta_foto
-# - texto separado (para lectura)
-# - texto unido para ponern nombres y crear mp3 tag. 
-#
-# Una vez completo, se guarda. Luego se genera el audio, 
-# - ruta del mp3
-
-# TODO leer el fichero se summary
-# datos_gen = {'ruta_foto': path_foto,
-#              'libro':     fake_title,
-#              'author':    fake_author}
-
 df_caps = get_df_capitulos(caps)
 df_caps
 
@@ -83,11 +72,22 @@ capitulos_titles = palabras_representativas(capitulos)
 
 capitulos_titles
 
-# +
-#todo , poner el diccionario
-# -
+di_caps  # capitulos
 
-# # 3. Creación de wav's base
+d_summaries[titulo]
+
+update_di_capi(di_caps, capitulos_titles, d_summaries, titulo)
+
+di_caps[1]
+
+path_book = make_folder('data_out/' + titulo + '/')
+
+# json_save(di_caps, 'data_out/json/' + titulo + '.json')
+json_save(di_caps, path_book + 'content.json')
+
+# ## 2. AUDIO
+
+# ### 2.1 Init
 
 # Atentos a si hay un modelo más moderno que `v3_es`
 
@@ -104,7 +104,7 @@ available_languages = list(models.tts_models.keys())
 
 for lang in available_languages:
     modeli = list(models.tts_models.get(lang).keys())
-    print(f'Available models for {lang}: {modeli}')
+print(f'Available models for {lang}: {modeli}')
 
 # +
 # configuración
@@ -130,81 +130,7 @@ model.to(device)  # gpu or cpu
 
 speakers_test(model)
 
-# ## a) generación de los wavs
+# # 3. Creación de mp3 de cada capítulo
+j = json_read('data_out/json/' + titulo + '.json', keys_as_integer=True)
 
-path = 'data_out/wav/' + titulo
-make_folder(path)
-
-# i = 0
-for i in range(0, 3):
-    wav_generator(caps, 'es_1', i, path, model)
-
-len(caps) * 9
-
-# # Paso a Mp3
-
-# +
-# res = wav2mp3(titulo) convierte todos lo de una carpeta
-
-# +
-# import ffmpeg
-# -
-
-# Es posible hacerlo desde python, pero hay que instalar el ffmpeg y es un poco webiao
-from pydub import AudioSegment as qu
-
-# +
-# ver si me evito guardar el wav
-# -
-
-
-aa
-
-aa = AudioSegment.from_wav("data_out/wav/test_es_2.wav")
-# pa='c:/Users/milen/Desktop/git/cuentame_python/data_out/sample.jpg'
-# pa='c:\\Users\\milen\\Desktop\\git\\cuentame_python\\data_out\\sample.jpg'
-# pa='data_out\\sample.jpg'
-# pa='c:/Users/milen/Downloads/huasca cover.jpg'
-pa = 'c:/Users/milen/Downloads/20220629_203445.jpg'
-# pa = 'c:/pina.png'
-
-tag = {'title': 'micanc', 'artist': 'yopisos'}
-
-uu = aa.export("data_out/wav/test_es_t9.mp3", format="mp3", id3v2_version='3', tags=tag, cover=pa).close()  # funciona!
-
-# +
-# uu = aa.export("data_out/wav/test_es_t11.mp3", format="mp3", id3v2_version='3', cover=pa).close() # NO funciona!
-
-# +
-# segun he visto con Picard, las imagenes están, pero el reprodictor 
-# no lo muestra porque tiene etiqueta "otro" en vez de "frontal"
-
-# +
-# si le agrego que es id3 v2 funciona en ffmpeg
-# ffmpeg -i in.mp3 -i sample.jpg -map_metadata 0 -map 0 -map 1 -id3v2_version 3 output.mp3
-# -
-
-# # 4 Unión de mp3's
-# unimos varios para tener unos más largos como capitulos
-#
-
-# simplemente es unir los aufios en un alistay hacer lista.export(...,format='xx')
-
-a1 = qu.from_wav('data_out/wav/El planeta americano/0000_es_1.wav')
-a2 = qu.from_wav('data_out/wav/El planeta americano/0001_es_1.wav')
-
-a1
-
-a2
-
-tag = {'title': 'micanc', 'artist': 'yopisos'}
-pa = 'c:/Users/milen/Desktop/git/cuentame_python/data_out/sample.jpg'
-(a1 + a2).export("data_out/wav/combined.mp3", format="mp3", id3v2_version='3', tags=tag, cover=pa).close()
-
-# +
-# 4.1 nombre de cada capítulo
-# -
-
-# ## next
-# 1. Unir mp3s (se requiere igual el ffmpeg (ver código en R), así que podemos reeditar la parte de crear mp3s
-# 2. generar las palabras carácterísticas de cada capítulo para poner como título
+procesa_capitulo(j, i_cap=1)

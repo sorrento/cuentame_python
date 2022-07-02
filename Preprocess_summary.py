@@ -8,7 +8,7 @@
 #       format_version: '1.5'
 #       jupytext_version: 1.13.7
 #   kernelspec:
-#     display_name: Python 3
+#     display_name: Python 3 (ipykernel)
 #     language: python
 #     name: python3
 # ---
@@ -23,7 +23,10 @@
 
 from PIL import Image
 from ipywidgets import fixed, interactive
-from utils import get_books, crop, get_image_path, upload_lib_summary
+from u_images import crop
+from utils import get_books, get_image_path, upload_lib_summary
+from u_io import get_filename
+from u_base import json_read
 
 PATH_CALIBRE = 'c:/Users/milen/Biblioteca de calibre/'
 
@@ -31,7 +34,11 @@ doc_list, files = get_books(PATH_CALIBRE)
 
 images = [get_image_path(x) for x in files]
 
-im = Image.open(images[3])
+i = 1
+
+titulo = get_filename(files[i], True).split(' - ')[0]
+
+im = Image.open(images[i])
 if im.size[0] > 700:
     im = im.reduce(2)
 im.reduce(4)
@@ -39,11 +46,21 @@ im.reduce(4)
 u = interactive(crop, f=(0.1, 1, 0.05), sx=(1, int(im.size[0] * .5)), sy=(1, int(im.size[1] * .5)), img=fixed(im))
 u
 
-im_r = u.result.resize((200, 200))
+# +
+si = u.result.size[0]
+a = 200
+b = min(si, 2 * a)
+im_low = u.result.resize((a, a))
+im_hi = u.result.resize((b, b))
 
-im_r
-# falta guardar la imagen, la insertaremos mano luego
+im_low
+# la insertaremos mano luego
 # https://parse-dashboard.back4app.com/apps/a8b7aa27-c240-42d5-9567-d95a43ba4b8f/browser/librosSum
+# -
+
+base = 'data_out/images/{}/{}.jpg'
+im_low.save(base.format('low', titulo))
+im_hi.save(base.format('hi', titulo))
 
 # # Crear el objeto
 #
@@ -52,7 +69,6 @@ im_r
 
 # +
 # vamos a crear el objeto summary para insertarlo en librossum con imagen
-# -
 
 
 # +
@@ -65,7 +81,7 @@ im_r
 # print(json_response)
 # -
 
-from u_base import read_json
-j = read_json('data/summary_ex.json')
-upload_lib_summary(j)
+j = json_read('data/summary_ex.json')
+j
 
+upload_lib_summary(j)
