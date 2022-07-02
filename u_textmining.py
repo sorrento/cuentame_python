@@ -150,7 +150,7 @@ las que son mayúsculas (quizás sí se puede, no lo sé)
     """
     import re
     # s = texto.split()  # no las corta bien. deja guión inicial, y al final, puntos o comas
-    ss = re.split(r'[-,\.\s—¿\?!¡;:…»\(\)”]\s*', texto)
+    ss = re.split(r'[-,\.\s—¿\?!¡;:…»\(\)“”\'’]\s*', texto)
     return ss
 
 

@@ -14,7 +14,7 @@
 # ---
 
 # # Audiobook 
-# - Crea audiobooks (wav o mp3) con sintetizador
+# - Crea audiobooks (mp3) con sintetizador
 #
 # **to do**
 # - verificar si es más rápido leer párraos cortos, sólo los puntos seguidos en el sintetizador
@@ -131,6 +131,7 @@ model.to(device)  # gpu or cpu
 speakers_test(model)
 
 # # 3. Creación de mp3 de cada capítulo
+
 j = json_read('data_out/json/' + titulo + '.json', keys_as_integer=True)
 
 procesa_capitulo(j, i_cap=1)

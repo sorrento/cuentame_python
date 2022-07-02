@@ -7,7 +7,6 @@ import json
 from IPython.core.display import display
 from IPython.lib.display import Audio
 from pydub import AudioSegment
-from AudioBook import titulo, path_book, model
 
 from secret_keys import *
 from u_base import get_now_format, inicia, tardado, json_read, make_folder
@@ -655,7 +654,7 @@ def get_mp3_tag(dd, i_cap, titulo):
     return tag, pa
 
 
-def procesa_capitulo(j, i_cap):
+def procesa_capitulo(j, i_cap, titulo, path_book, model):
     dd = j[i_cap]
 
     dd['lan'] = 'ES'  # todo tiene que venir

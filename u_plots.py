@@ -1,5 +1,7 @@
+import matplotlib.pyplot as plt
+
+
 def plot_save(write_png, folder, filename):
-    import matplotlib.pyplot as plt
     if write_png:
         if folder is not None:
             png = folder + filename + '.png'
@@ -22,7 +24,6 @@ bob = [81, 30, 75, 37, 46]
     desc
     """
     import numpy as np
-    import matplotlib.pyplot as plt
     plt.style.use('ggplot')
 
     angles = np.linspace(0, 2 * np.pi, len(concepts), endpoint=False)
@@ -49,6 +50,5 @@ bob = [81, 30, 75, 37, 46]
 
 
 def plot_hist(lista, bins=10):
-    import matplotlib.pyplot as plt
     # create histogram from list of data
     plt.hist(lista, bins=bins)
