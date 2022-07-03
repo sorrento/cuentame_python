@@ -23,6 +23,8 @@
 
 from PIL import Image
 from ipywidgets import fixed, interactive
+from pandas import read_json
+
 from u_images import crop
 from utils import get_books, get_image_path, upload_lib_summary
 from u_io import get_filename
@@ -34,8 +36,7 @@ doc_list, files = get_books(PATH_CALIBRE)
 
 images = [get_image_path(x) for x in files]
 
-i = 1
-
+i = 0
 titulo = get_filename(files[i], True).split(' - ')[0]
 
 im = Image.open(images[i])
@@ -81,7 +82,7 @@ im_hi.save(base.format('hi', titulo))
 # print(json_response)
 # -
 
-j = json_read('data/summary_ex.json')
+j = json_read('data/summaries.json')
 j
 
 upload_lib_summary(j)

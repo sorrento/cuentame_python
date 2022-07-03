@@ -21,9 +21,9 @@
 import pandas as pd
 
 from mongo import get_db, get_colls
-from u_base import save_df, json_save, json_read
+from u_base import save_df, json_save, json_read, json_update
 from utils import get_fakes, get_frecuencia_words, fichero_para_mathematica, agrega_a_dicc, quita_numeros, get_books, \
-    cabeza_y_cola, corta, crea_capsulas, rompe_parrafo,get_fake_title
+    cabeza_y_cola, corta, crea_capsulas, rompe_parrafo, get_fake_title, txt_read
 from u_textmining import get_word_matrix
 
 PATH_CALIBRE = 'c:/Users/milen/Biblioteca de calibre/'
@@ -31,9 +31,7 @@ PATH_CALIBRE = 'c:/Users/milen/Biblioteca de calibre/'
 doc_list, files = get_books(PATH_CALIBRE)
 vector_matrix, vocab = get_word_matrix(doc_list)
 
-# +
-lang = "EN" # >>>
-
+lang = "EN"  # >>>
 dic_fake, di_counts = get_fakes(doc_list, files, vector_matrix, vocab, lang)
 
 # +
@@ -45,28 +43,47 @@ dic_fake, di_counts = get_fakes(doc_list, files, vector_matrix, vocab, lang)
 import pandas as pd
 pd.DataFrame.from_dict(dic_fake)
 
-# +
-# Fichero para Mathemtica
-# df_mat, filename_mat = fichero_para_mathematica(dic_fake)
-# -
+dic_fake[18]
+
+j = {dic_fake[k]['title']: dic_fake[k] for k in dic_fake}
+
+json_save(j, 'data/summaries.json')
 
 # ## Get partes
+
+# #### a) por bulk
 
 i_book = 18
 file = files[i_book]
 texto = doc_list[i_book]
 
+# #### b) Individual (del json)
+
+j = json_read('data/summaries.json')
+
+titles = sorted(list(j.keys()))
+titles
+
+pat = 'nder'
+titulo = [x for x in titles if pat in x][0]
+print(titulo)
+d = j[titulo]
+texto = txt_read(d['path'])
+
+# #### Continuamos
+
 partes, df = cabeza_y_cola(texto, 110)
 
 # +
-ini = 91 # >>>
-fin = 3350 # >>>
+ini = 91  # >>>
+fin = 3350  # >>>
 
-dic_fake[i_book]['min']=ini
-dic_fake[i_book]['max']=fin
+d['min'], d['max'] = ini, fin
 # -
 
-dic_fake[i_book]
+d
+
+json_update({d['title']: d}, 'data/summaries.json')
 
 # ## Cortar
 

@@ -54,6 +54,12 @@ def json_read(json_file, keys_as_integer=False):
     return data
 
 
+def json_update(j, path):
+    jj = json_read(path)
+    jj.update(j)
+    json_save(jj, path)
+
+
 def get_now():
     ct = now()
     # ts = ct.timestamp()
