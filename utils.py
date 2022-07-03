@@ -51,6 +51,10 @@ genera un título de 3 palabras con las palabras más representivas del texto
     ej = pd.melt(pd.DataFrame(vector_matrix[i, :].todense(), columns=vocab))
     ejj = ej.sort_values('value', ascending=False).set_index('variable')  # preparamos para la funcion pick
 
+    # quitamos los numeros:
+    digits = [x for x in ejj.index if x.isdigit()]
+    ejj = ejj[~ejj.index.isin(digits)]
+
     # quitamos las palabras que se usaron como fake author
     if l_authors is None:
         ejj2 = ejj
@@ -88,7 +92,7 @@ obtiene los autores fake y reales del libro (y título), ademoas de un diccionar
     # print('\n\n*******', get_filename(file))
     l_authors, df_names, d_count = get_fake_authors(texto)
     fake_authors = ' '.join(l_authors)
-    nombres = list(df_names.head(20).index)
+    nombres = list(df_names.index)
 
     l_title = get_fake_title(vector_matrix, vocab, i, nombres)
     fake_title = ' '.join(l_title)
@@ -102,7 +106,7 @@ obtiene los autores fake y reales del libro (y título), ademoas de un diccionar
     return di, d_count
 
 
-def get_fakes(doc_list, files, vector_matrix, vocab):
+def get_fakes(doc_list, files, vector_matrix, vocab, lang):
     """
 genera un diccioario con el titulo, autor, titulo fake y autor fake para los libros de la biblioteca Calibre que se
 han trnasformado en txt en el día más reciente
@@ -114,17 +118,18 @@ han trnasformado en txt en el día más reciente
     """
     t = inicia('Get fakes')
 
-    di2 = {}
+    di_fakes = {}
     di_counts = {}
     for i in range(len(files)):
-        di, di_count = get_book_summary(i, files, doc_list, vector_matrix, vocab)
-        # print(di)
-        di2[i] = di
+        di_fake, di_count = get_book_summary(i, files, doc_list, vector_matrix, vocab)
+        # print(di_fake)
+        di_fake['idioma'] = lang
+        di_fakes[i] = di_fake
         di_counts[i] = di_count
 
     tardado(t)
 
-    return di2, di_counts
+    return di_fakes, di_counts
 
 
 def get_books(path):
@@ -218,7 +223,7 @@ muestra el principio y el final, para que podamos a ojo ver dónde empieza y ter
 
     pd.set_option('display.width', 10)
     pd.set_option('display.max_colwidth', 150)
-    pd.set_option('display.max_rows', 100)
+    pd.set_option('display.max_rows', 300)
 
     display(df.tail(n_row))
     display(df.head(n_row))

@@ -23,20 +23,27 @@ import pandas as pd
 from mongo import get_db, get_colls
 from u_base import save_df, json_save, json_read
 from utils import get_fakes, get_frecuencia_words, fichero_para_mathematica, agrega_a_dicc, quita_numeros, get_books, \
-    cabeza_y_cola, corta, crea_capsulas, rompe_parrafo
+    cabeza_y_cola, corta, crea_capsulas, rompe_parrafo,get_fake_title
 from u_textmining import get_word_matrix
 
 PATH_CALIBRE = 'c:/Users/milen/Biblioteca de calibre/'
 
 doc_list, files = get_books(PATH_CALIBRE)
 vector_matrix, vocab = get_word_matrix(doc_list)
-dic_fake, di_counts = get_fakes(doc_list, files, vector_matrix, vocab)
 
-lang = "ES"
+# +
+lang = "EN" # >>>
 
-# ## para summary:
+dic_fake, di_counts = get_fakes(doc_list, files, vector_matrix, vocab, lang)
 
-dic_fake
+# +
+# texto = 'yo soy “ patp'
+# import re
+# re.split(r'[-,\.\s—¿\?!¡;:…»\(\)”]\s*', texto)
+# -
+
+import pandas as pd
+pd.DataFrame.from_dict(dic_fake)
 
 # +
 # Fichero para Mathemtica
@@ -45,24 +52,30 @@ dic_fake
 
 # ## Get partes
 
-i_book = 1
+i_book = 18
 file = files[i_book]
 texto = doc_list[i_book]
 
-texto
+partes, df = cabeza_y_cola(texto, 110)
 
-partes, df = cabeza_y_cola(texto, 30)
+# +
+ini = 91 # >>>
+fin = 3350 # >>>
 
-# todo guardar esto en json, para no hacerlo de nuevo
-ini = 13
-fin = 386
+dic_fake[i_book]['min']=ini
+dic_fake[i_book]['max']=fin
+# -
+
+dic_fake[i_book]
+
+# ## Cortar
+
 partes, df = corta(partes, df, ini, fin)
 
 df
 
 la = partes[0]
 la
-
 
 capsu = rompe_parrafo(la)
 
@@ -88,13 +101,13 @@ dic_fake[i_book]["libroId"] = id_free
 
 dic_fake[i_book]
 
-d_summaries={}
+d_summaries = {}
 
 j = 'data/summary_ex.json'
 
 d_summaries = json_read(j)
 
-d_summaries[dic_fake[i_book]['title']]=dic_fake[i_book]
+d_summaries[dic_fake[i_book]['title']] = dic_fake[i_book]
 
 json_save(d_summaries, j)
 
