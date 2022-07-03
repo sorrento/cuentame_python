@@ -15,6 +15,12 @@ from u_plots import plot_hist
 from u_text import numero_a_letras
 from u_textmining import get_candidatos_nombres_all, pick
 
+SAMPLE_EN = 'The monitor lady smiled very nicely and tousled his hair and said, "Andrew, I suppose by now you\'re just absolutely sick of having that horrid monitor. Well, I have good news for you. That monitor is '
+
+SAMPLE_ES = 'Formalmente, desde el Acuerdo Marco "Aurora" de 1953, los centros pertenecientes a la red mundial debían ' \
+            '"trabajar en plena colaboración académica y humana, compartiendo los avances tanto en conocimientos ' \
+            'fundamentales como en técnicas.'
+
 SUMMARIES_JSON = 'data/summaries.json'
 
 
@@ -534,11 +540,9 @@ def speakers_test(model, put_accent=True, sample_rate=48000, put_yo=True,
 
 
 def lee(model,
-        txt='Formalmente, desde el Acuerdo Marco "Aurora" de 1953, los centros pertenecientes a la red mundial debían '
-            '"trabajar en plena colaboración académica y humana, compartiendo los avances tanto en conocimientos '
-            'fundamentales como en técnicas.', sample_rate=48000, put_accent=True, put_yo=True):
+        txt=SAMPLE_ES, speaker='es_1', sample_rate=48000, put_accent=True, put_yo=True):
     audio = model.apply_tts(text=txt,
-                            speaker='es_1',
+                            speaker=speaker,
                             sample_rate=sample_rate,
                             put_accent=put_accent,
                             put_yo=put_yo
@@ -637,6 +641,7 @@ def update_di_capi(di_caps, capitulos_titles, d, titulo):
         uu['singer'] = d['fakeAuthor']
         uu['path_cover'] = 'data_out/images/hi/' + titulo + '.jpg'
         uu['mp3_name'] = str(i_).zfill(2) + ' - ' + e + '.mp3'
+        uu['language'] = d['idioma']
 
 
 def get_mp3_tag(dd, i_cap, titulo):
@@ -647,7 +652,7 @@ def get_mp3_tag(dd, i_cap, titulo):
            # estos los identifica el picard
            'Date':        '07/07/2021',
            'Subtitle':    'subtitulo',
-           'language':    dd['lan'],
+           'language':    dd['language'],
            'Comment':     'comm',
 
            'year':        '2023',
@@ -661,22 +666,36 @@ def get_mp3_tag(dd, i_cap, titulo):
     return tag, pa
 
 
-def procesa_capitulo(j, i_cap, titulo, path_book, model):
-    dd = j[i_cap]
+def procesa_capitulo(di_caps, i_cap, titulo, path_book, model, speaker, debug_mode=False):
+    import time
+    dd = di_caps[i_cap]
 
-    dd['lan'] = 'ES'  # todo tiene que venir
+    path_mp3 = path_book + dd['album'] + ' - ' + dd['singer'] + '/'
+    make_folder(path_mp3)
     tag, img_path = get_mp3_tag(dd, i_cap, titulo)
 
     t = inicia('Sintentizando cap {}'.format(dd['mp3_name']))
     path_ch = make_folder(path_book + str(i_cap).zfill(2))
     au_acc = AudioSegment.silent(100)
-    for k in range(len(dd['capsulas'][:3])):
+    n_caps = len(dd['capsulas'][:3])
+    if debug_mode:
+        n_caps = 3
+
+    for k in range(n_caps):
         cap = dd['capsulas'][k]
-        au_capsula = wav_generator(cap[:100], 'es_1', k, path_ch, model)
+        if debug_mode:
+            cap = cap[:100]
+        au_capsula = wav_generator(cap, speaker, k, path_ch, model)
+        print(str(k))
+        display(au_capsula)
         au_acc = au_acc + au_capsula + AudioSegment.silent(300)
-    au_acc.export(path_book + dd['mp3_name'], format="mp3", id3v2_version='3',
+
+    name_ = path_mp3 + dd['mp3_name']
+    print('** Exportando el final a {}'.format(name_))
+    au_acc.export(name_, format="mp3", id3v2_version='3',
                   tags=tag, cover=img_path).close()
-    tardado(t)
+    tiempo = tardado(t)
+    return time.strftime('%H:%M:%S', time.gmtime(tiempo))
 
 
 def get_book_datas(pat):
@@ -690,3 +709,18 @@ def get_book_datas(pat):
     im = Image.open(get_image_path(d['path']))
 
     return texto, im, titulo, d
+
+
+def sample_speaker(model, d):
+    if d['idioma'] == 'ES':
+        txt = SAMPLE_ES[:200]
+    else:
+        txt = SAMPLE_EN
+    return lee(model, txt, speaker=d['speaker'])
+
+
+def test_voices_en(model, lista):
+    print(SAMPLE_EN)
+    for vo in lista:
+        print(vo)
+        display(lee(model, SAMPLE_EN, speaker=vo))

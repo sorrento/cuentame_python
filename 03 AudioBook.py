@@ -22,10 +22,10 @@
 # %load_ext autoreload
 # %autoreload 2
 
-from u_base import json_read, json_save, make_folder
+from u_base import json_read, json_save, make_folder, json_update
 from utils import crea_capsulas_max, get_parrafos, get_final_parrfs, speakers_test, get_df_capitulos, \
-    get_dic_capitulos, update_di_capi, procesa_capitulo, get_book_datas
-from u_textmining import palabras_representativas, get_candidatos_nombres_all
+    get_dic_capitulos, update_di_capi, procesa_capitulo, get_book_datas, SUMMARIES_JSON, sample_speaker,test_voices_en
+from u_textmining import palabras_representativas
 
 LIM = 950  # largo de las cápsulas, límite de lo que puede leer el sinte
 
@@ -61,16 +61,14 @@ di_caps = get_dic_capitulos(df_caps)
 # ## 2.1 Descripción de cada capítulo
 
 # +
-#depurar los nombres que salen, modificando el regex de split()
+# depurar los nombres que salen, modificando el regex de split()
 # df_names, d_all = get_candidatos_nombres_all(txt)
 # list(df_names.index)
 # -
 
 capitulos = ['\n '.join(di_caps[cap]['capsulas']) for cap in di_caps]
 
-
-
-capitulos_titles = palabras_representativas(capitulos,l_exclude=d['names'])
+capitulos_titles = palabras_representativas(capitulos, l_exclude=d['names'])
 
 capitulos_titles
 
@@ -105,12 +103,13 @@ available_languages = list(models.tts_models.keys())
 
 for lang in available_languages:
     modeli = list(models.tts_models.get(lang).keys())
+    print(modeli)
 print(f'Available models for {lang}: {modeli}')
 
 # +
 # configuración
-language = 'es'
-model_id = 'v3_es'
+language = d['idioma'].lower()
+model_id = 'v3_es' if language == 'es' else 'v3_en'
 
 sample_rate = 48000
 put_accent = True
@@ -129,10 +128,60 @@ model.to(device)  # gpu or cpu
 
 # Atentos a si **aparecen nuevas voces**
 
-speakers_test(model)
+if language == 'es':
+    speakers_test(model)
+
+# +
+# speakers
+if 'speaker' not in d:
+    if language == 'es':
+        speaker = 'es_1'
+    else:
+        import random
+
+        best_en = ['en_' + str(i) for i in [33, 50, 61, 75, 94]]
+        speaker = random.choice(best_en)
+
+    # update fichero
+    d['speaker'] = speaker
+    json_update({titulo: d}, SUMMARIES_JSON)
+
+else:
+    speaker = d['speaker']
+
+
+# -
+
+
+speaker='en_94' # Sophie
+d['speaker'] = speaker
+json_update({titulo: d}, SUMMARIES_JSON)
+
+test_voices_en(model, best_en)
+
+sample_speaker(model, d)
 
 # # 3. Creación de mp3 de cada capítulo
 
-j = json_read('data_out/json/' + titulo + '.json', keys_as_integer=True)
+path_json='data_out/{}/content.json'.format(titulo)
 
-procesa_capitulo(j, i_cap=1)
+di_caps = json_read(path_json, keys_as_integer=True)
+
+i_cap=1
+
+dd=di_caps[i_cap]
+
+dd.keys()
+
+dd['elapsed']=procesa_capitulo(di_caps, i_cap=1, titulo=titulo, path_book=path_book, model=model,
+                 speaker=speaker,
+                 debug_mode=True)
+
+json_update({i_cap:dd}, path_json)
+
+di_caps[1].keys()
+
+for c in [ 'song', 'album', 'singer', 'path_cover', 'mp3_name', 'language']:
+    print(c, ': ',di_caps[i_cap][c])
+
+
