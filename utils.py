@@ -15,6 +15,8 @@ from u_plots import plot_hist
 from u_text import numero_a_letras
 from u_textmining import get_candidatos_nombres_all, pick
 
+SUMMARIES_JSON = 'data/summaries.json'
+
 
 def seleccion_txt(path):
     lista = lista_files_recursiva(path, 'txt')
@@ -102,6 +104,7 @@ obtiene los autores fake y reales del libro (y título), ademoas de un diccionar
     di["path"] = file
     di["listo"] = False
     di["i"] = i
+    di['names'] = nombres
 
     return di, d_count
 
@@ -457,7 +460,7 @@ def rompe_parr(df, i, lim):
 
 
 def get_parrafos(titu):
-    d_summaries = json_read('data/summary_ex.json')
+    d_summaries = json_read(SUMMARIES_JSON)
 
     di = d_summaries[titu]
     texto = txt_read(di['path'])
@@ -624,15 +627,14 @@ def get_dic_capitulos(df_caps):
     return dd
 
 
-def update_di_capi(di_caps, capitulos_titles, d_summaries, titulo):
+def update_di_capi(di_caps, capitulos_titles, d, titulo):
     for i, e in enumerate(capitulos_titles):
         i_ = i + 1
         uu = di_caps[i_]
-        gen = d_summaries[titulo]
 
         uu['song'] = str(i_) + '. ' + e
-        uu['album'] = gen['fakeTitle']
-        uu['singer'] = gen['fakeAuthoro']  # todo cambiar
+        uu['album'] = d['fakeTitle']
+        uu['singer'] = d['fakeAuthor']
         uu['path_cover'] = 'data_out/images/hi/' + titulo + '.jpg'
         uu['mp3_name'] = str(i_).zfill(2) + ' - ' + e + '.mp3'
 
@@ -675,3 +677,16 @@ def procesa_capitulo(j, i_cap, titulo, path_book, model):
     au_acc.export(path_book + dd['mp3_name'], format="mp3", id3v2_version='3',
                   tags=tag, cover=img_path).close()
     tardado(t)
+
+
+def get_book_datas(pat):
+    from PIL import Image
+    j = json_read(SUMMARIES_JSON)
+    titles = sorted(list(j.keys()))
+    titulo = [x for x in titles if pat in x][0]
+    print(titulo)
+    d = j[titulo]
+    texto = txt_read(d['path'])
+    im = Image.open(get_image_path(d['path']))
+
+    return texto, im, titulo, d

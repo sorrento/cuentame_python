@@ -55,7 +55,10 @@ def json_read(json_file, keys_as_integer=False):
 
 
 def json_update(j, path):
-    jj = json_read(path)
+    import os
+    jj = {}
+    if os.path.isfile(path):
+        jj = json_read(path)
     jj.update(j)
     json_save(jj, path)
 

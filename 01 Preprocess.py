@@ -18,13 +18,16 @@
 
 # %load_ext autoreload
 # %autoreload 2
+
+# +
 import pandas as pd
 
 from mongo import get_db, get_colls
 from u_base import save_df, json_save, json_read, json_update
-from utils import get_fakes, get_frecuencia_words, fichero_para_mathematica, agrega_a_dicc, quita_numeros, get_books, \
-    cabeza_y_cola, corta, crea_capsulas, rompe_parrafo, get_fake_title, txt_read
 from u_textmining import get_word_matrix
+from utils import get_fakes, get_frecuencia_words, agrega_a_dicc, quita_numeros, get_books, \
+    cabeza_y_cola, corta, crea_capsulas, rompe_parrafo, get_book_datas, SUMMARIES_JSON
+# -
 
 PATH_CALIBRE = 'c:/Users/milen/Biblioteca de calibre/'
 
@@ -34,20 +37,10 @@ vector_matrix, vocab = get_word_matrix(doc_list)
 lang = "EN"  # >>>
 dic_fake, di_counts = get_fakes(doc_list, files, vector_matrix, vocab, lang)
 
-# +
-# texto = 'yo soy “ patp'
-# import re
-# re.split(r'[-,\.\s—¿\?!¡;:…»\(\)”]\s*', texto)
-# -
-
-import pandas as pd
 pd.DataFrame.from_dict(dic_fake)
 
-dic_fake[18]
-
 j = {dic_fake[k]['title']: dic_fake[k] for k in dic_fake}
-
-json_save(j, 'data/summaries.json')
+json_update(j, SUMMARIES_JSON)
 
 # ## Get partes
 
@@ -59,16 +52,11 @@ texto = doc_list[i_book]
 
 # #### b) Individual (del json)
 
-j = json_read('data/summaries.json')
-
+j = json_read(SUMMARIES_JSON)
 titles = sorted(list(j.keys()))
 titles
 
-pat = 'nder'
-titulo = [x for x in titles if pat in x][0]
-print(titulo)
-d = j[titulo]
-texto = txt_read(d['path'])
+texto, img, titulo, d = get_book_datas('nder')
 
 # #### Continuamos
 
@@ -83,7 +71,7 @@ d['min'], d['max'] = ini, fin
 
 d
 
-json_update({d['title']: d}, 'data/summaries.json')
+json_update({d['title']: d}, SUMMARIES_JSON)
 
 # ## Cortar
 

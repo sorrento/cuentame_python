@@ -24,20 +24,16 @@
 
 from u_base import json_read, json_save, make_folder
 from utils import crea_capsulas_max, get_parrafos, get_final_parrfs, speakers_test, get_df_capitulos, \
-    get_dic_capitulos, update_di_capi, procesa_capitulo
-from u_textmining import palabras_representativas
+    get_dic_capitulos, update_di_capi, procesa_capitulo, get_book_datas
+from u_textmining import palabras_representativas, get_candidatos_nombres_all
 
 LIM = 950  # largo de las cápsulas, límite de lo que puede leer el sinte
 
 # ## 1. Selección del libro
 # Tiene que ser un libro ya procesado, así no tengo que cortar la cabeza y cola desde aquí
 
-d_summaries = json_read('data/summary_ex.json')
-list(set(d_summaries.keys()))
+txt, im, titulo, d = get_book_datas('nder')
 
-d_summaries
-
-titulo = 'El planeta americano'
 df = get_parrafos(titulo)
 df
 
@@ -64,11 +60,17 @@ di_caps = get_dic_capitulos(df_caps)
 
 # ## 2.1 Descripción de cada capítulo
 
+# +
+#depurar los nombres que salen, modificando el regex de split()
+# df_names, d_all = get_candidatos_nombres_all(txt)
+# list(df_names.index)
+# -
+
 capitulos = ['\n '.join(di_caps[cap]['capsulas']) for cap in di_caps]
 
-capitulos[0]
 
-capitulos_titles = palabras_representativas(capitulos)
+
+capitulos_titles = palabras_representativas(capitulos,l_exclude=d['names'])
 
 capitulos_titles
 
@@ -76,13 +78,12 @@ di_caps  # capitulos
 
 d_summaries[titulo]
 
-update_di_capi(di_caps, capitulos_titles, d_summaries, titulo)
+update_di_capi(di_caps, capitulos_titles, d, titulo)
 
 di_caps[1]
 
 path_book = make_folder('data_out/' + titulo + '/')
 
-# json_save(di_caps, 'data_out/json/' + titulo + '.json')
 json_save(di_caps, path_book + 'content.json')
 
 # ## 2. AUDIO

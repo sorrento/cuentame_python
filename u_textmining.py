@@ -150,7 +150,7 @@ las que son mayúsculas (quizás sí se puede, no lo sé)
     """
     import re
     # s = texto.split()  # no las corta bien. deja guión inicial, y al final, puntos o comas
-    ss = re.split(r'[-,\.\s—¿\?!¡;:…»\(\)“”\'’]\s*', texto)
+    ss = re.split(r'[-,\.\s—¿\?!¡;:…»\(\)“”\'’\"\']\s*', texto)
     return ss
 
 
@@ -217,7 +217,7 @@ de un df, coge las top rows y selecciona n índices de acuerdo al peso dado por 
     return l
 
 
-def palabras_representativas(lista, n_best=3, n_pick=3):
+def palabras_representativas(lista, l_exclude=None, n_best=3, n_pick=3):
     """
 Forma lista de strings, con las n_pick palabras más representativas de cada texto. Escoge n_pick aleatoriamente
 de las n_best
@@ -226,14 +226,19 @@ de las n_best
     :param n_pick:
     :return:
     """
-    import pandas as pd
     vector_matrix, vocab = get_word_matrix(lista)
 
     def oo(i, n_best, n_pick):
         ej = pd.melt(pd.DataFrame(vector_matrix[i, :].todense(), columns=vocab))
         ejj = ej.sort_values('value', ascending=False).set_index('variable')  # preparamos para la funcion pick
 
-        return ' '.join(pick(ejj, n_best, n_pick, 'value'))
+        # quitamos las palabras
+        if l_exclude is None:
+            ejj2 = ejj
+        else:
+            ejj2 = ejj[~ejj.index.isin([x.lower() for x in l_exclude])]
+
+        return ' '.join(pick(ejj2, n_best, n_pick, 'value'))
 
     return [oo(i, n_best, n_pick) for i in range(len(lista))]
 

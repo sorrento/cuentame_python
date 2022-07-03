@@ -23,14 +23,14 @@
 
 from PIL import Image
 from ipywidgets import fixed, interactive
-from pandas import read_json
-
 from u_images import crop
-from utils import get_books, get_image_path, upload_lib_summary
+from utils import get_books, get_image_path, upload_lib_summary, get_book_datas
 from u_io import get_filename
 from u_base import json_read
 
 PATH_CALIBRE = 'c:/Users/milen/Biblioteca de calibre/'
+
+# #### a) los de la última fecha
 
 doc_list, files = get_books(PATH_CALIBRE)
 
@@ -38,8 +38,14 @@ images = [get_image_path(x) for x in files]
 
 i = 0
 titulo = get_filename(files[i], True).split(' - ')[0]
-
 im = Image.open(images[i])
+
+# #### b) Por nombre
+
+txt, im, titulo, d = get_book_datas('nder')
+
+# #### Continuamos
+
 if im.size[0] > 700:
     im = im.reduce(2)
 im.reduce(4)
@@ -82,7 +88,8 @@ im_hi.save(base.format('hi', titulo))
 # print(json_response)
 # -
 
-j = json_read('data/summaries.json')
+# revisar esto
+j = json_read('data/summary_ex.json')
 j
 
 upload_lib_summary(j)
