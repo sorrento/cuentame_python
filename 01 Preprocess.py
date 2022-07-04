@@ -56,7 +56,7 @@ j = json_read(SUMMARIES_JSON)
 titles = sorted(list(j.keys()))
 titles
 
-texto, img, titulo, d = get_book_datas('nder')
+texto, img, titulo, d_summary = get_book_datas('nder')
 
 # #### Continuamos
 
@@ -66,12 +66,12 @@ partes, df = cabeza_y_cola(texto, 110)
 ini = 91  # >>>
 fin = 3350  # >>>
 
-d['min'], d['max'] = ini, fin
+d_summary['min'], d_summary['max'] = ini, fin
 # -
 
-d
+d_summary
 
-json_update({d['title']: d}, SUMMARIES_JSON)
+json_update({d_summary['title']: d_summary}, SUMMARIES_JSON)
 
 # ## Cortar
 
@@ -86,19 +86,19 @@ capsu = rompe_parrafo(la)
 
 capsu
 
-d = crea_capsulas(partes, df, lmin=300, lmax=999)
+d_summary = crea_capsulas(partes, df, lmin=300, lmax=999)
 
-d[1]
+d_summary[1]
 
-d[2]
+d_summary[2]
 
-[len(' '.join(d[x]['texto'])) for x in d]
+[len(' '.join(d_summary[x]['texto'])) for x in d_summary]
 
-len(d)
+len(d_summary)
 
 id_free = 999
 
-dic_fake[i_book]["nCapitulos"] = len(d)
+dic_fake[i_book]["nCapitulos"] = len(d_summary)
 dic_fake[i_book]["min"] = ini
 dic_fake[i_book]["max"] = fin
 dic_fake[i_book]["idioma"] = lang

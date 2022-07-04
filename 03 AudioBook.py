@@ -17,6 +17,8 @@
 # - Crea audiobooks (mp3) con sintetizador
 #
 # **to do**
+# - ejecutar en Collab
+# - ejecutar en gpu en local o colab
 # - verificar si es más rápido leer párraos cortos, sólo los puntos seguidos en el sintetizador
 
 # %load_ext autoreload
@@ -24,15 +26,46 @@
 
 from u_base import json_read, json_save, make_folder, json_update
 from utils import crea_capsulas_max, get_parrafos, get_final_parrfs, speakers_test, get_df_capitulos, \
-    get_dic_capitulos, update_di_capi, procesa_capitulo, get_book_datas, SUMMARIES_JSON, sample_speaker,test_voices_en
+    get_dic_capitulos, update_di_capi, procesa_capitulo, get_book_datas, SUMMARIES_JSON, sample_speaker, test_voices_en, \
+    lee, CONTENT_JSON
 from u_textmining import palabras_representativas
 
-LIM = 950  # largo de las cápsulas, límite de lo que puede leer el sinte
+LIM = 850  # largo de las cápsulas, límite de lo que puede leer el sinte
 
 # ## 1. Selección del libro
 # Tiene que ser un libro ya procesado, así no tengo que cortar la cabeza y cola desde aquí
 
-txt, im, titulo, d = get_book_datas('nder')
+pat='a'
+d_summaries = json_read(SUMMARIES_JSON)
+# print(d_summaries)
+titles = sorted(list(d_summaries.keys()))
+titulo = [x for x in titles if pat in x][0]
+print(titulo)
+
+d_summary = d_summaries[titulo]
+
+print(d_summary.keys())
+
+# +
+
+texto = txt_read(d_summary['path'])
+# -
+
+txt, im, titulo, d_summary = get_book_datas('nder')
+
+# +
+# apaño, porque parece que se perdiño en alguna parte
+# d_summaries = json_read(SUMMARIES_JSON)
+# ini = 91  # >>>
+# fin = 3350  # >>>
+
+# d_summaries[titulo]['min'], d_summaries[titulo]['max'] = ini, fin
+
+
+# json_save(d_summaries, SUMMARIES_JSON)
+# -
+
+d_summary.keys()
 
 df = get_parrafos(titulo)
 df
@@ -44,19 +77,19 @@ final
 
 max(final.len.to_list())  # todo, puede que haya alguno que sea grande y no tenga punto. Cor
 
-final[final.len > LIM]
+final[final.len > LIM]  # TODO REVISAR POR QUÉ HAY ALGUNOS MÁS LARGOS QUE EL LÍMITE
 
 final[final.len > LIM].parte.iloc[0]
 
-d = crea_capsulas_max(partes, final, lmax=LIM, verbose=False)
-caps = ['.\n'.join(d[x]['texto']) for x in d]  # todo probar si sintetizador lee punto aparte
+d_capsulas = crea_capsulas_max(partes, final, lmax=LIM, verbose=False)
+caps = ['.\n'.join(d_capsulas[x]['texto']) for x in d_capsulas]  # todo probar si sintetizador lee punto aparte
 
 caps[12]  # las cápsulas son las que puede leer de una sola vez
 
-df_caps = get_df_capitulos(caps)
-df_caps
+df_capitulos = get_df_capitulos(caps)
+df_capitulos
 
-di_caps = get_dic_capitulos(df_caps)
+d_capitulos = get_dic_capitulos(df_capitulos)
 
 # ## 2.1 Descripción de cada capítulo
 
@@ -66,23 +99,20 @@ di_caps = get_dic_capitulos(df_caps)
 # list(df_names.index)
 # -
 
-capitulos = ['\n '.join(di_caps[cap]['capsulas']) for cap in di_caps]
+capitulos = ['\n '.join(d_capitulos[cap]['capsulas']) for cap in d_capitulos]
 
-capitulos_titles = palabras_representativas(capitulos, l_exclude=d['names'])
+len(capitulos)
 
+capitulos_titles = palabras_representativas(capitulos, l_exclude=d_summary['names'])
 capitulos_titles
 
-di_caps  # capitulos
+update_di_capi(d_capitulos, capitulos_titles, d_summary, titulo)
 
-d_summaries[titulo]
-
-update_di_capi(di_caps, capitulos_titles, d, titulo)
-
-di_caps[1]
+d_capitulos[1].keys()
 
 path_book = make_folder('data_out/' + titulo + '/')
 
-json_save(di_caps, path_book + 'content.json')
+json_save(d_capitulos, path_book + CONTENT_JSON)
 
 # ## 2. AUDIO
 
@@ -103,12 +133,11 @@ available_languages = list(models.tts_models.keys())
 
 for lang in available_languages:
     modeli = list(models.tts_models.get(lang).keys())
-    print(modeli)
-print(f'Available models for {lang}: {modeli}')
+    print(f'Available models for {lang}: {modeli}')
 
 # +
 # configuración
-language = d['idioma'].lower()
+language = d_summary['idioma'].lower()
 model_id = 'v3_es' if language == 'es' else 'v3_en'
 
 sample_rate = 48000
@@ -132,7 +161,7 @@ if language == 'es':
     speakers_test(model)
 
 # +
-# speakers
+# speakers, random voice
 if 'speaker' not in d:
     if language == 'es':
         speaker = 'es_1'
@@ -149,39 +178,38 @@ if 'speaker' not in d:
 else:
     speaker = d['speaker']
 
-
 # -
 
 
-speaker='en_94' # Sophie
-d['speaker'] = speaker
-json_update({titulo: d}, SUMMARIES_JSON)
+speaker = 'en_94'  # Sophie
+d_summary['speaker'] = speaker
+json_update({titulo: d_summary}, SUMMARIES_JSON)
 
 test_voices_en(model, best_en)
 
-sample_speaker(model, d)
+sample_speaker(model, d_summary)
 
 # # 3. Creación de mp3 de cada capítulo
 
-path_json='data_out/{}/content.json'.format(titulo)
+path_json = 'data_out/{}/{}'.format(titulo, CONTENT_JSON)
+d_capitulos = json_read(path_json, keys_as_integer=True)
 
-di_caps = json_read(path_json, keys_as_integer=True)
+i_cap = 1 # <<<<<<
 
-i_cap=1
+di_capitulo = d_capitulos[i_cap]
 
-dd=di_caps[i_cap]
+di_capitulo['elapsed'] = procesa_capitulo(d_capitulos, i_cap=1, titulo=titulo, path_book=path_book, model=model,
+                                 speaker=speaker,
+                                 debug_mode=False)
 
-dd.keys()
+di_capitulo['elapsed']=d_summary['elapsed']#todo borrar
 
-dd['elapsed']=procesa_capitulo(di_caps, i_cap=1, titulo=titulo, path_book=path_book, model=model,
-                 speaker=speaker,
-                 debug_mode=True)
+json_update({i_cap:di_capitulo}, path_json)
 
-json_update({i_cap:dd}, path_json)
+# Prueba si un cap falla por longitud
+txt = d_capitulos[1]['capsulas'][6]
+txt
 
-di_caps[1].keys()
+len(txt)
 
-for c in [ 'song', 'album', 'singer', 'path_cover', 'mp3_name', 'language']:
-    print(c, ': ',di_caps[i_cap][c])
-
-
+lee(model, txt[:900], speaker)

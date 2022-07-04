@@ -22,6 +22,7 @@ SAMPLE_ES = 'Formalmente, desde el Acuerdo Marco "Aurora" de 1953, los centros p
             'fundamentales como en técnicas.'
 
 SUMMARIES_JSON = 'data/summaries.json'
+CONTENT_JSON = 'capitulos.json'
 
 
 def seleccion_txt(path):
@@ -632,6 +633,13 @@ def get_dic_capitulos(df_caps):
 
 
 def update_di_capi(di_caps, capitulos_titles, d, titulo):
+    """
+pone en cada capítulo la información de la "cancion"
+    :param di_caps:
+    :param capitulos_titles:
+    :param d:
+    :param titulo:
+    """
     for i, e in enumerate(capitulos_titles):
         i_ = i + 1
         uu = di_caps[i_]
@@ -677,7 +685,7 @@ def procesa_capitulo(di_caps, i_cap, titulo, path_book, model, speaker, debug_mo
     t = inicia('Sintentizando cap {}'.format(dd['mp3_name']))
     path_ch = make_folder(path_book + str(i_cap).zfill(2))
     au_acc = AudioSegment.silent(100)
-    n_caps = len(dd['capsulas'][:3])
+    n_caps = len(dd['capsulas'])
     if debug_mode:
         n_caps = 3
 
@@ -700,15 +708,15 @@ def procesa_capitulo(di_caps, i_cap, titulo, path_book, model, speaker, debug_mo
 
 def get_book_datas(pat):
     from PIL import Image
-    j = json_read(SUMMARIES_JSON)
-    titles = sorted(list(j.keys()))
+    d_summaries = json_read(SUMMARIES_JSON)
+    titles = sorted(list(d_summaries.keys()))
     titulo = [x for x in titles if pat in x][0]
     print(titulo)
-    d = j[titulo]
-    texto = txt_read(d['path'])
-    im = Image.open(get_image_path(d['path']))
+    d_summary = d_summaries[titulo]
+    texto = txt_read(d_summary['path'])
+    im = Image.open(get_image_path(d_summary['path']))
 
-    return texto, im, titulo, d
+    return texto, im, titulo, d_summary
 
 
 def sample_speaker(model, d):
