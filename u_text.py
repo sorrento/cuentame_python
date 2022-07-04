@@ -1,3 +1,5 @@
+from u_base import list_min_pos
+
 MONEDA_SINGULAR = 'bolivar'
 MONEDA_PLURAL = 'bolivares'
 CENTIMOS_SINGULAR = 'centimo'
@@ -172,3 +174,18 @@ def leer_millones(numero):
 def leer_millardos(numero):
     millardo, millon = divmod(numero, 1000000)
     return '%s millones %s' % (leer_miles(millardo), leer_millones(millon))
+
+
+def divide_texto_en_dos(txt):
+    import re
+    sep = r'\. '
+    ss = re.split(r'\. ', txt)
+    ll = int(len(txt) / 2)
+    le = [len(x) for x in ss]
+    v = 0
+    aa = [v := v + n for n in le]
+    xx = [abs(x - ll) for x in aa]
+    nn = list_min_pos(xx) + 1
+    txt1 = sep.join(ss[:nn]) + sep
+    txt2 = sep.join(ss[nn:])
+    return txt1, txt2

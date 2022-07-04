@@ -28,6 +28,7 @@ from u_base import json_read, json_save, make_folder, json_update
 from utils import crea_capsulas_max, get_parrafos, get_final_parrfs, speakers_test, get_df_capitulos, \
     get_dic_capitulos, update_di_capi, procesa_capitulo, get_book_datas, SUMMARIES_JSON, sample_speaker, test_voices_en, \
     lee, CONTENT_JSON
+from u_text import divide_texto_en_dos
 from u_textmining import palabras_representativas
 
 LIM = 850  # largo de las cápsulas, límite de lo que puede leer el sinte
@@ -35,7 +36,7 @@ LIM = 850  # largo de las cápsulas, límite de lo que puede leer el sinte
 # ## 1. Selección del libro
 # Tiene que ser un libro ya procesado, así no tengo que cortar la cabeza y cola desde aquí
 
-pat='a'
+pat = 'a'
 d_summaries = json_read(SUMMARIES_JSON)
 # print(d_summaries)
 titles = sorted(list(d_summaries.keys()))
@@ -194,22 +195,14 @@ sample_speaker(model, d_summary)
 path_json = 'data_out/{}/{}'.format(titulo, CONTENT_JSON)
 d_capitulos = json_read(path_json, keys_as_integer=True)
 
-i_cap = 1 # <<<<<<
-
-di_capitulo = d_capitulos[i_cap]
-
-di_capitulo['elapsed'] = procesa_capitulo(d_capitulos, i_cap=1, titulo=titulo, path_book=path_book, model=model,
-                                 speaker=speaker,
-                                 debug_mode=False)
-
-di_capitulo['elapsed']=d_summary['elapsed']#todo borrar
-
-json_update({i_cap:di_capitulo}, path_json)
+ini = 3
+for i_cap in range(ini, 25 + 1):
+    procesa_capitulo(d_capitulos, i_capitulo=i_cap, titulo=titulo, path_book=path_book, model=model,
+                     speaker=speaker,
+                     debug_mode=False)
 
 # Prueba si un cap falla por longitud
-txt = d_capitulos[1]['capsulas'][6]
-txt
-
-len(txt)
-
-lee(model, txt[:900], speaker)
+txt = d_capitulos[3]['capsulas'][28]
+print(len(txt))
+print(txt)
+lee(model, txt[:750], speaker)

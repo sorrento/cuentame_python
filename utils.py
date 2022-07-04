@@ -9,10 +9,10 @@ from IPython.lib.display import Audio
 from pydub import AudioSegment
 
 from secret_keys import *
-from u_base import get_now_format, inicia, tardado, json_read, make_folder
+from u_base import get_now_format, inicia, tardado, json_read, make_folder, json_update
 from u_io import lista_files_recursiva, fecha_mod, get_filename, txt_read, txt_write
 from u_plots import plot_hist
-from u_text import numero_a_letras
+from u_text import numero_a_letras, divide_texto_en_dos
 from u_textmining import get_candidatos_nombres_all, pick
 
 SAMPLE_EN = 'The monitor lady smiled very nicely and tousled his hair and said, "Andrew, I suppose by now you\'re just absolutely sick of having that horrid monitor. Well, I have good news for you. That monitor is '
@@ -569,19 +569,32 @@ def reemplaza_nums(new_string):
 
 
 def wav_generator(txt, voz, i_cap, path, model, write_txt=True,
-                  sample_rate=48000, put_accent=True, put_yo=True):
-    t = inicia(' i = {}'.format(i_cap))
+                  sample_rate=48000, put_accent=True, put_yo=True, n_caps='?', i_capitulo='?'):
+    t = inicia(' capsula = {}/{}. Capitulo:{}'.format(i_cap, n_caps, i_capitulo))
     print(txt[0:30])
 
     name = str(i_cap).zfill(4) + '_' + voz
-    audio = model.apply_tts(text=reemplaza_nums(txt),
-                            speaker=voz,
-                            sample_rate=sample_rate,
-                            put_accent=put_accent,
-                            put_yo=put_yo
-                            )
-    au = Audio(audio, rate=sample_rate)
-    au_seg = audio_save(au, name, path)
+
+    mp_ = path + name + '.mp3'
+    if os.path.isfile(mp_):
+        print('*ya existe la parte {}. La saltamos '.format(mp_))
+        au_seg = AudioSegment.from_mp3(mp_)
+    else:
+        try:
+            audio = model.apply_tts(text=reemplaza_nums(txt),
+                                    speaker=voz,
+                                    sample_rate=sample_rate,
+                                    put_accent=put_accent,
+                                    put_yo=put_yo
+                                    )
+            au = Audio(audio, rate=sample_rate)
+            au_seg = audio_save(au, name, path)
+        except Exception as e:
+            print('** ERROR: ' + str(e))
+            txt1, txt2 = divide_texto_en_dos(txt)
+            au1 = wav_generator(txt1, voz, str(i_cap) + '_a', path, model)
+            au2 = wav_generator(txt1, voz, str(i_cap) + '_b', path, model)
+            au_seg = au1 + au2
 
     if write_txt:
         txt_write(path + '/' + name, txt)
@@ -652,15 +665,15 @@ pone en cada capítulo la información de la "cancion"
         uu['language'] = d['idioma']
 
 
-def get_mp3_tag(dd, i_cap, titulo):
-    tag = {'title':       dd['song'], 'artist': dd['singer'], 'album': dd['album'],
-           'Track':       i_cap,
+def get_mp3_tag(d_capitulo, i_capitulo, titulo):
+    tag = {'title':       d_capitulo['song'], 'artist': d_capitulo['singer'], 'album': d_capitulo['album'],
+           'Track':       i_capitulo,
            'Genre':       'Ebook',
 
            # estos los identifica el picard
            'Date':        '07/07/2021',
            'Subtitle':    'subtitulo',
-           'language':    dd['language'],
+           'language':    d_capitulo['language'],
            'Comment':     'comm',
 
            'year':        '2023',
@@ -674,36 +687,43 @@ def get_mp3_tag(dd, i_cap, titulo):
     return tag, pa
 
 
-def procesa_capitulo(di_caps, i_cap, titulo, path_book, model, speaker, debug_mode=False):
+def procesa_capitulo(d_capitulos, i_capitulo, titulo, path_book, model, speaker,
+                     debug_mode=False):
     import time
-    dd = di_caps[i_cap]
+    d_capitulo = d_capitulos[i_capitulo]
 
-    path_mp3 = path_book + dd['album'] + ' - ' + dd['singer'] + '/'
+    path_mp3 = path_book + d_capitulo['album'] + ' - ' + d_capitulo['singer'] + '/'
     make_folder(path_mp3)
-    tag, img_path = get_mp3_tag(dd, i_cap, titulo)
+    tag, img_path = get_mp3_tag(d_capitulo, i_capitulo, titulo)
 
-    t = inicia('Sintentizando cap {}'.format(dd['mp3_name']))
-    path_ch = make_folder(path_book + str(i_cap).zfill(2))
+    t = inicia('Sintentizando capsula {}'.format(d_capitulo['mp3_name']))
+    path_ch = make_folder(path_book + str(i_capitulo).zfill(2))
     au_acc = AudioSegment.silent(100)
-    n_caps = len(dd['capsulas'])
+    n_caps = len(d_capitulo['capsulas'])
     if debug_mode:
         n_caps = 3
 
     for k in range(n_caps):
-        cap = dd['capsulas'][k]
+        capsula = d_capitulo['capsulas'][k]
         if debug_mode:
-            cap = cap[:100]
-        au_capsula = wav_generator(cap, speaker, k, path_ch, model)
+            capsula = capsula[:100]
+        au_capsula = wav_generator(capsula, speaker, k, path_ch, model,
+                                   n_caps=str(n_caps), i_capitulo=i_capitulo)
         print(str(k))
         display(au_capsula)
-        au_acc = au_acc + au_capsula + AudioSegment.silent(300)
+        au_acc = au_acc + au_capsula + AudioSegment.silent(450)
 
-    name_ = path_mp3 + dd['mp3_name']
+    name_ = path_mp3 + d_capitulo['mp3_name']
     print('** Exportando el final a {}'.format(name_))
     au_acc.export(name_, format="mp3", id3v2_version='3',
                   tags=tag, cover=img_path).close()
     tiempo = tardado(t)
-    return time.strftime('%H:%M:%S', time.gmtime(tiempo))
+
+    # actualizamos el json con la info de cuánto tardó en leer
+    t2 = time.strftime('%H:%M:%S', time.gmtime(tiempo))
+    d_capitulo['elapsed'] = t2
+    path_json = 'data_out/{}/{}'.format(titulo, CONTENT_JSON)
+    json_update({i_capitulo: d_capitulo}, path_json)
 
 
 def get_book_datas(pat):

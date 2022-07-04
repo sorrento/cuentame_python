@@ -142,3 +142,13 @@ def win_exe(cmd):
     out = os.popen(cmd).read()
     print('**OUT:{}'.format(out))
     return out
+
+
+def list_min_pos(lista):
+    """
+da la (primera) posición del elemento más pequeño
+    :param lista:
+    :return:
+    """
+    mi = min(lista)
+    return lista.index(mi)
