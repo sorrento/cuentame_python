@@ -22,6 +22,7 @@
 # - ejecutar en gpu en local o colab
 # - verificar si es más rápido leer párraos cortos, sólo los puntos seguidos en el sintetizador
 
+# +
 # %load_ext autoreload
 # %autoreload 2
 
@@ -33,27 +34,28 @@ from u_text import divide_texto_en_dos
 from u_textmining import palabras_representativas
 
 LIM = 850  # largo de las cápsulas, límite de lo que puede leer el sinte
+# -
 
 # ## 1. Selección del libro
 # Tiene que ser un libro ya procesado, así no tengo que cortar la cabeza y cola desde aquí
 
-pat = 'nde'
+# +
+pat = 'uasc' # <<<<<<
+
 d_summaries = json_read(SUMMARIES_JSON)
 # print(d_summaries)
 titles = sorted(list(d_summaries.keys()))
 titulo = [x for x in titles if pat in x][0]
 print(titulo)
 
-d_summary = d_summaries[titulo]
-
-print(d_summary.keys())
+# +
+# d_summary = d_summaries[titulo]
 
 # +
-
-texto = txt_read(d_summary['path'])
+# texto = txt_read(d_summary['path'])
 # -
 
-txt, im, titulo, d_summary = get_book_datas('nder')
+txt, im, titulo, d_summary = get_book_datas(pat)
 
 # +
 # apaño, porque parece que se perdiño en alguna parte
@@ -66,8 +68,6 @@ txt, im, titulo, d_summary = get_book_datas('nder')
 
 # json_save(d_summaries, SUMMARIES_JSON)
 # -
-
-d_summary.keys()
 
 df = get_parrafos(titulo)
 df
@@ -111,8 +111,6 @@ capitulos_titles = palabras_representativas(capitulos, l_exclude=d_summary['name
 capitulos_titles
 
 update_di_capi(d_capitulos, capitulos_titles, d_summary, titulo)
-
-d_capitulos[1].keys()
 
 path_book = make_folder('data_out/' + titulo + '/')
 
@@ -161,12 +159,17 @@ model.to(device)  # gpu or cpu
 
 # Atentos a si **aparecen nuevas voces**
 
+d_capitulos[1]['capsulas'][0][:450]
+
 if language == 'es':
-    speakers_test(model)
+    speakers_test(model,
+                  txt=d_capitulos[1]['capsulas'][0][:450]
+#                  txt='Millonarios por una semana.\n Cuando no se tiene una chaucha en el bolsillo, no es muy amplia la gama de actividades elegibles para matar el tiempo. Con Diego y Vittorio nos juntábamos casi todos los d'
+                 )
 
 # +
 # speakers, random voice
-if 'speaker' not in d:
+if 'speaker' not in d_summary:
     if language == 'es':
         speaker = 'es_1'
     else:
@@ -176,18 +179,19 @@ if 'speaker' not in d:
         speaker = random.choice(best_en)
 
     # update fichero
-    d['speaker'] = speaker
-    json_update({titulo: d}, SUMMARIES_JSON)
+    d_summary['speaker'] = speaker
+    json_update({titulo: d_summary}, SUMMARIES_JSON)
 
 else:
-    speaker = d['speaker']
+    speaker = d_summary['speaker']
 
+
+# +
+# elegido a mano
+# speaker = 'en_94'  # Sophie
+# d_summary['speaker'] = speaker
+# json_update({titulo: d_summary}, SUMMARIES_JSON)
 # -
-
-
-speaker = 'en_94'  # Sophie
-d_summary['speaker'] = speaker
-json_update({titulo: d_summary}, SUMMARIES_JSON)
 
 test_voices_en(model, best_en)
 
@@ -198,14 +202,19 @@ sample_speaker(model, d_summary)
 path_json = 'data_out/{}/{}'.format(titulo, CONTENT_JSON)
 d_capitulos = json_read(path_json, keys_as_integer=True)
 
-ini = 3
+sps=['es_0', 'es_1', 'es_2']
+
+ini = 1 # mínimo es 1
 for i_cap in range(ini, 25 + 1):
     procesa_capitulo(d_capitulos, i_capitulo=i_cap, titulo=titulo, path_book=path_book, model=model,
                      speaker=speaker,
-                     debug_mode=False)
+                     debug_mode=False,
+                     speakers=sps
+                    )
 
+# +
 # Prueba si un cap falla por longitud
-txt = d_capitulos[3]['capsulas'][28]
-print(len(txt))
-print(txt)
-lee(model, txt[:750], speaker)
+# txt = d_capitulos[3]['capsulas'][28]
+# print(len(txt))
+# print(txt)
+# lee(model, txt[:750], speaker)

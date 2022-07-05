@@ -25,16 +25,18 @@ SUMMARIES_JSON = 'data/summaries.json'
 CONTENT_JSON = 'capitulos.json'
 
 
-def seleccion_txt(path):
-    lista = lista_files_recursiva(path, 'txt')
-    fechas = [fecha_mod(x) for x in lista]
-    maxi = max(fechas)
-    files = [x for x in lista if fecha_mod(x) == maxi]
+def seleccion_txt(path, fecha=None):
+    all_ = lista_files_recursiva(path, 'txt')
+    fechas = [fecha_mod(x) for x in all_]
+    if fecha is None:
+        fecha = max(fechas)
+        print('** La ultima fecha de ficheros es: ', fecha)
 
-    print('** La ultima fecha de ficheros es: ', maxi)
+    files = [x for x in all_ if fecha_mod(x) == fecha]
+
     print(pd.DataFrame(get_filename(x) for x in files))
 
-    return files
+    return files, all_
 
 
 def get_fake_authors(texto):
@@ -537,7 +539,7 @@ def speakers_test(model, put_accent=True, sample_rate=48000, put_yo=True,
         au = Audio(audio, rate=sample_rate)
 
         tag = {'title': 'Voice Test: ' + sp, 'artist': sp}
-        audio_save(au, 'data_out/wav/test_' + sp, show=True, tag=tag)
+        audio_save(au, 'test_' + sp, 'data_out/wav/', show=True, tag=tag)
 
 
 def lee(model,
@@ -688,7 +690,7 @@ def get_mp3_tag(d_capitulo, i_capitulo, titulo):
 
 
 def procesa_capitulo(d_capitulos, i_capitulo, titulo, path_book, model, speaker,
-                     debug_mode=False):
+                     debug_mode=False, speakers=None):
     import time
     d_capitulo = d_capitulos[i_capitulo]
 
@@ -707,6 +709,12 @@ def procesa_capitulo(d_capitulos, i_capitulo, titulo, path_book, model, speaker,
         capsula = d_capitulo['capsulas'][k]
         if debug_mode:
             capsula = capsula[:100]
+
+        # elegimos voz aleatoria en cada tramo
+        if speakers is not None:
+            import random
+            speaker= random.choice(speakers)
+
         au_capsula = wav_generator(capsula, speaker, k, path_ch, model,
                                    n_caps=str(n_caps), i_capitulo=i_capitulo)
         print(str(k))

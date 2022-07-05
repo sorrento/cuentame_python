@@ -26,17 +26,47 @@ from mongo import get_db, get_colls
 from u_base import save_df, json_save, json_read, json_update
 from u_textmining import get_word_matrix
 from utils import get_fakes, get_frecuencia_words, agrega_a_dicc, quita_numeros, get_books, \
-    cabeza_y_cola, corta, crea_capsulas, rompe_parrafo, get_book_datas, SUMMARIES_JSON
-
+    cabeza_y_cola, corta, crea_capsulas, rompe_parrafo, get_book_datas, SUMMARIES_JSON,seleccion_txt,txt_read
+from u_io import get_filename
 # -
 
 PATH_CALIBRE = 'c:/Users/milen/Biblioteca de calibre/'
 
+# ## a) Un libro en particular
+
+one_book=True
+
+last, all_= seleccion_txt(PATH_CALIBRE)
+
+pat='Huasca'#<<<<<<
+book=[get_filename(x, True) for x in all_ if pat in x][0]
+book
+
+file=[x for x in all_ if book in x]
+
+date_es=20200504
+files_es, _= seleccion_txt(PATH_CALIBRE,fecha=date_es)
+
+files=file+files_es
+
+doc_list = [txt_read(x) for x in files]
+
+# ## b) De última extracción calibre
+
+PATH_CALIBRE
+
 doc_list, files = get_books(PATH_CALIBRE)
+files
+
+# # Continuamos
+
 vector_matrix, vocab, _ = get_word_matrix(doc_list)
 
-lang = "EN"  # >>>
+lang = "ES"  # >>>
 dic_fake, di_counts = get_fakes(doc_list, files, vector_matrix, vocab, lang)
+
+if one_book:
+    dic_fake={0:dic_fake[0]}
 
 pd.DataFrame.from_dict(dic_fake)
 
@@ -57,15 +87,15 @@ j = json_read(SUMMARIES_JSON)
 titles = sorted(list(j.keys()))
 titles
 
-texto, img, titulo, d_summary = get_book_datas('nder')
+texto, img, titulo, d_summary = get_book_datas('uasc')
 
 # #### Continuamos
 
-partes, df = cabeza_y_cola(texto, 110)
+partes, df = cabeza_y_cola(texto, 70)
 
 # +
-ini = 91  # >>>
-fin = 3350  # >>>
+ini = 64  # >>>
+fin = 335  # >>>
 
 d_summary['min'], d_summary['max'] = ini, fin
 # -
@@ -73,6 +103,8 @@ d_summary['min'], d_summary['max'] = ini, fin
 d_summary
 
 json_update({d_summary['title']: d_summary}, SUMMARIES_JSON)
+
+# Aquí se puede saltar al 02 si solo se quiere hacer un audiobook
 
 # ## Cortar
 

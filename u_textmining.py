@@ -225,6 +225,7 @@ def palabras_representativas(lista, l_exclude=None, n_best=3, n_pick=3, max_df=.
     """
 Forma lista de strings, con las n_pick palabras más representativas de cada texto. Escoge n_pick aleatoriamente
 de las n_best
+    :param l_exclude:
     :param max_df:  proporción de documentos. si lo bajamos quitamos los muy frecuentes
     :param min_df:  % de docs. Si lo subo quito palabras poco frecuentes
     :param lista: lista con textos
