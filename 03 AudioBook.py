@@ -17,6 +17,7 @@
 # - Crea audiobooks (mp3) con sintetizador
 #
 # **to do**
+# - verificar el tfidf, que sale "army" en muchos capítulos
 # - ejecutar en Collab
 # - ejecutar en gpu en local o colab
 # - verificar si es más rápido leer párraos cortos, sólo los puntos seguidos en el sintetizador
@@ -36,7 +37,7 @@ LIM = 850  # largo de las cápsulas, límite de lo que puede leer el sinte
 # ## 1. Selección del libro
 # Tiene que ser un libro ya procesado, así no tengo que cortar la cabeza y cola desde aquí
 
-pat = 'a'
+pat = 'nde'
 d_summaries = json_read(SUMMARIES_JSON)
 # print(d_summaries)
 titles = sorted(list(d_summaries.keys()))
@@ -104,7 +105,9 @@ capitulos = ['\n '.join(d_capitulos[cap]['capsulas']) for cap in d_capitulos]
 
 len(capitulos)
 
-capitulos_titles = palabras_representativas(capitulos, l_exclude=d_summary['names'])
+capitulos_titles = palabras_representativas(capitulos, l_exclude=d_summary['names'], 
+                                            max_df=.4, #.8  proporción de documentos. si lo bajamos quitamos los muy frecuentes
+                                            min_df=.2)#.2  % de docs. Si lo subo quito palabras poco frecuentes
 capitulos_titles
 
 update_di_capi(d_capitulos, capitulos_titles, d_summary, titulo)

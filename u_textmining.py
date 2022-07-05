@@ -179,10 +179,13 @@ def tf_idf_keywords(docs, vector_matrix, vocab, doc_freq, num_keywords):
     docs_to_update = []
     # Obtain keywords from TfidfVectorizer
     for doc, vect_text in zip(docs, vector_matrix):
+        print('\n\n************')
         vect_text = vect_text.todense().reshape((-1))
         # Get terms with highest tf-idf score
         pos = vect_text.argsort().tolist()[0][-num_keywords:][::-1]
         # Covert to document-wise term frequency
+        sc = pd.DataFrame({'vect': np.ravel(vect_text), 'freq':np.ravel(doc_freq), })
+        display(sc)
         vect_text = np.multiply(vect_text, doc_freq)
         vect_text = vect_text[0, pos].tolist()[0]
         # Convert to integer
@@ -192,8 +195,9 @@ def tf_idf_keywords(docs, vector_matrix, vocab, doc_freq, num_keywords):
         kw = [kw_pair for kw_pair in kw if kw_pair[1] > 0
               and not kw_pair[0].translate(str.maketrans('', '', string.punctuation + ' ')) \
             .isnumeric()]
-        doc.keywords = kw
-        docs_to_update.append(doc)
+        # doc.keywords = kw
+        # docs_to_update(kw)
+        docs_to_update.append(kw)
 
     return docs_to_update
 
@@ -217,16 +221,18 @@ de un df, coge las top rows y selecciona n índices de acuerdo al peso dado por 
     return l
 
 
-def palabras_representativas(lista, l_exclude=None, n_best=3, n_pick=3):
+def palabras_representativas(lista, l_exclude=None, n_best=3, n_pick=3, max_df=.8, min_df=.2):
     """
 Forma lista de strings, con las n_pick palabras más representativas de cada texto. Escoge n_pick aleatoriamente
 de las n_best
+    :param max_df:  proporción de documentos. si lo bajamos quitamos los muy frecuentes
+    :param min_df:  % de docs. Si lo subo quito palabras poco frecuentes
     :param lista: lista con textos
     :param n_best:
     :param n_pick:
     :return:
     """
-    vector_matrix, vocab = get_word_matrix(lista)
+    vector_matrix, vocab, doc_freq = get_word_matrix(lista, max_df, min_df)
 
     def oo(i, n_best, n_pick):
         ej = pd.melt(pd.DataFrame(vector_matrix[i, :].todense(), columns=vocab))
@@ -243,10 +249,10 @@ de las n_best
     return [oo(i, n_best, n_pick) for i in range(len(lista))]
 
 
-def get_word_matrix(doc_list):
+def get_word_matrix(doc_list, max_df=.8, min_df=.2):
     params = {
-        'tfidf_max_df':          .8,  # proporción de documentos. si lo bajamos quitamos los muy frecuentes
-        'tfidf_min_df':          .2,  # % de docs. Si lo subo quito palabras poco frecuentes
+        'tfidf_max_df':          max_df,  # proporción de documentos. si lo bajamos quitamos los muy frecuentes
+        'tfidf_min_df':          min_df,  # % de docs. Si lo subo quito palabras poco frecuentes
         'tfidf_analyzer':        'word',
         'tfidf_stop_words':      True,
         'tfidf_ngram_range_min': 1,
@@ -255,4 +261,4 @@ def get_word_matrix(doc_list):
         'tfidf_num_keywords':    5
     }
     vector_matrix, vocab, doc_freq = tf_idf_preprocessing(doc_list, params)
-    return vector_matrix, vocab
+    return vector_matrix, vocab, doc_freq

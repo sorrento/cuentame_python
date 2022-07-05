@@ -500,7 +500,7 @@ def audio_save(au, name, path, mp3=True, show=False, tag=None):
         ext = '.wav'
 
     no = path + '/' + name + ext
-    print('Guardando ', no)
+    print(' ** Guardando ', no)
 
     if mp3:
         with open(tem, 'wb') as f:

@@ -27,12 +27,13 @@ from u_base import save_df, json_save, json_read, json_update
 from u_textmining import get_word_matrix
 from utils import get_fakes, get_frecuencia_words, agrega_a_dicc, quita_numeros, get_books, \
     cabeza_y_cola, corta, crea_capsulas, rompe_parrafo, get_book_datas, SUMMARIES_JSON
+
 # -
 
 PATH_CALIBRE = 'c:/Users/milen/Biblioteca de calibre/'
 
 doc_list, files = get_books(PATH_CALIBRE)
-vector_matrix, vocab = get_word_matrix(doc_list)
+vector_matrix, vocab, _ = get_word_matrix(doc_list)
 
 lang = "EN"  # >>>
 dic_fake, di_counts = get_fakes(doc_list, files, vector_matrix, vocab, lang)

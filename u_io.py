@@ -80,7 +80,7 @@ lee fichero de texto
 
 def txt_write(file_path, txt):
     txt_ = file_path + '.txt'
-    print('**Guardando ', txt_)
+    print('  ** Guardando ', txt_)
     text_file = open(txt_, "w", encoding='utf-8')
     text_file.write(txt)
     text_file.close()

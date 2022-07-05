@@ -127,7 +127,7 @@ def save_df(df, path, name, save_index=False, append_size=True):
         middle = ''
 
     filename = path + '/' + name + middle + '.csv'
-    print('** Guardando dataset en {}'.format(filename))
+    print('  ** Guardando dataset en {}'.format(filename))
     df.to_csv(filename, index=save_index)
 
     return filename
