@@ -40,13 +40,13 @@ LIM = 850  # largo de las cápsulas, límite de lo que puede leer el sinte
 # Tiene que ser un libro ya procesado, así no tengo que cortar la cabeza y cola desde aquí
 
 # +
-pat = 'uasc' # <<<<<<
+pat = 'andki' # <<<<<<
 
-d_summaries = json_read(SUMMARIES_JSON)
-# print(d_summaries)
-titles = sorted(list(d_summaries.keys()))
-titulo = [x for x in titles if pat in x][0]
-print(titulo)
+# d_summaries = json_read(SUMMARIES_JSON)
+# # print(d_summaries)
+# titles = sorted(list(d_summaries.keys()))
+# titulo = [x for x in titles if pat in x][0]
+# print(titulo)
 
 # +
 # d_summary = d_summaries[titulo]
@@ -102,8 +102,6 @@ d_capitulos = get_dic_capitulos(df_capitulos)
 # -
 
 capitulos = ['\n '.join(d_capitulos[cap]['capsulas']) for cap in d_capitulos]
-
-len(capitulos)
 
 capitulos_titles = palabras_representativas(capitulos, l_exclude=d_summary['names'], 
                                             max_df=.4, #.8  proporción de documentos. si lo bajamos quitamos los muy frecuentes
@@ -161,6 +159,8 @@ model.to(device)  # gpu or cpu
 
 d_capitulos[1]['capsulas'][0][:450]
 
+# ## Elegir Speaker
+
 if language == 'es':
     speakers_test(model,
                   txt=d_capitulos[1]['capsulas'][0][:450]
@@ -197,19 +197,25 @@ test_voices_en(model, best_en)
 
 sample_speaker(model, d_summary)
 
+test_voices_en(model, d_capitulos= d_capitulos)
+
 # # 3. Creación de mp3 de cada capítulo
 
 path_json = 'data_out/{}/{}'.format(titulo, CONTENT_JSON)
 d_capitulos = json_read(path_json, keys_as_integer=True)
 
-sps=['es_0', 'es_1', 'es_2']
+# +
+# sps=['es_0', 'es_1', 'es_2']
+
+speaker='en_32'
+# -
 
 ini = 1 # mínimo es 1
 for i_cap in range(ini, 25 + 1):
     procesa_capitulo(d_capitulos, i_capitulo=i_cap, titulo=titulo, path_book=path_book, model=model,
                      speaker=speaker,
                      debug_mode=False,
-                     speakers=sps
+#                      speakers=#sps
                     )
 
 # +

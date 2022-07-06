@@ -662,7 +662,7 @@ pone en cada capítulo la información de la "cancion"
         uu['song'] = str(i_) + '. ' + e
         uu['album'] = d['fakeTitle']
         uu['singer'] = d['fakeAuthor']
-        uu['path_cover'] = 'data_out/images/hi/' + titulo + '.jpg'
+        uu['path_cover'] = 'data_out/_images/hi/' + titulo + '.jpg'
         uu['mp3_name'] = str(i_).zfill(2) + ' - ' + e + '.mp3'
         uu['language'] = d['idioma']
 
@@ -684,7 +684,7 @@ def get_mp3_tag(d_capitulo, i_capitulo, titulo):
            'origyear':    '07/07/2021'
            }
 
-    pa = 'data_out/images/hi/{}.jpg'.format(titulo)
+    pa = 'data_out/_images/hi/{}.jpg'.format(titulo)
 
     return tag, pa
 
@@ -713,7 +713,7 @@ def procesa_capitulo(d_capitulos, i_capitulo, titulo, path_book, model, speaker,
         # elegimos voz aleatoria en cada tramo
         if speakers is not None:
             import random
-            speaker= random.choice(speakers)
+            speaker = random.choice(speakers)
 
         au_capsula = wav_generator(capsula, speaker, k, path_ch, model,
                                    n_caps=str(n_caps), i_capitulo=i_capitulo)
@@ -755,8 +755,15 @@ def sample_speaker(model, d):
     return lee(model, txt, speaker=d['speaker'])
 
 
-def test_voices_en(model, lista):
-    print(SAMPLE_EN)
+def test_voices_en(model, lista=None, d_capitulos=None):
+    txt = d_capitulos[1]['capsulas'][0][:230] if (d_capitulos is not None) else SAMPLE_EN
+    print(txt)
+
+    if lista is None:
+        import random
+        lista = random.choices(model.speakers, k=4)
+
+
     for vo in lista:
         print(vo)
-        display(lee(model, SAMPLE_EN, speaker=vo))
+        display(lee(model, txt, speaker=vo))

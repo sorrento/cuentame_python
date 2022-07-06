@@ -31,24 +31,28 @@ from u_io import get_filename
 # -
 
 PATH_CALIBRE = 'c:/Users/milen/Biblioteca de calibre/'
+lang = "EN"  # >>>
 
 # ## a) Un libro en particular
 
 one_book=True
 
+# i) por el más reciente
 last, all_= seleccion_txt(PATH_CALIBRE)
+book= get_filename(last[0], True)
+book
 
+# ii) alternativamente, por patrón
 pat='Huasca'#<<<<<<
 book=[get_filename(x, True) for x in all_ if pat in x][0]
 book
 
 file=[x for x in all_ if book in x]
 
-date_es=20200504
-files_es, _= seleccion_txt(PATH_CALIBRE,fecha=date_es)
-
+# libros de referencia para hacer el tf-idf
+date_es=20220703 if lang== 'EN' else 20200504 
+files_es, _= seleccion_txt(PATH_CALIBRE, fecha=date_es)
 files=file+files_es
-
 doc_list = [txt_read(x) for x in files]
 
 # ## b) De última extracción calibre
@@ -62,7 +66,6 @@ files
 
 vector_matrix, vocab, _ = get_word_matrix(doc_list)
 
-lang = "ES"  # >>>
 dic_fake, di_counts = get_fakes(doc_list, files, vector_matrix, vocab, lang)
 
 if one_book:
@@ -77,7 +80,7 @@ json_update(j, SUMMARIES_JSON)
 
 # #### a) por bulk
 
-i_book = 18
+i_book = 1
 file = files[i_book]
 texto = doc_list[i_book]
 
@@ -87,15 +90,16 @@ j = json_read(SUMMARIES_JSON)
 titles = sorted(list(j.keys()))
 titles
 
-texto, img, titulo, d_summary = get_book_datas('uasc')
+texto, img, titulo, d_summary = get_book_datas('andk')
 
 # #### Continuamos
 
-partes, df = cabeza_y_cola(texto, 70)
+partes, df = cabeza_y_cola(texto, 30)
 
 # +
-ini = 64  # >>>
-fin = 335  # >>>
+fin = 464  # >>>
+ini = 1  # >>>
+
 
 d_summary['min'], d_summary['max'] = ini, fin
 # -

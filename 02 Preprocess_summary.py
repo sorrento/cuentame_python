@@ -21,6 +21,7 @@
 # %load_ext autoreload
 # %autoreload 2
 
+# +
 from PIL import Image
 from ipywidgets import fixed, interactive
 from u_images import crop
@@ -29,6 +30,7 @@ from u_io import get_filename
 from u_base import json_read
 
 PATH_CALIBRE = 'c:/Users/milen/Biblioteca de calibre/'
+# -
 
 # #### a) los de la última fecha
 
@@ -42,7 +44,7 @@ im = Image.open(images[i])
 
 # #### b) Por nombre
 
-txt, im, titulo, d = get_book_datas('nder')
+txt, im, titulo, d = get_book_datas('andki')
 
 # #### Continuamos
 
@@ -60,12 +62,12 @@ b = min(si, 2 * a)
 im_low = u.result.resize((a, a))
 im_hi = u.result.resize((b, b))
 
-im_low
+# im_low
 # la insertaremos mano luego
 # https://parse-dashboard.back4app.com/apps/a8b7aa27-c240-42d5-9567-d95a43ba4b8f/browser/librosSum
 # -
 
-base = 'data_out/images/{}/{}.jpg'
+base = 'data_out/_images/{}/{}.jpg'
 im_low.save(base.format('low', titulo))
 im_hi.save(base.format('hi', titulo))
 
