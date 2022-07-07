@@ -659,7 +659,7 @@ pone en cada capítulo la información de la "cancion"
         i_ = i + 1
         uu = di_caps[i_]
 
-        uu['song'] = str(i_) + '. ' + e
+        uu['song'] = e
         uu['album'] = d['fakeTitle']
         uu['singer'] = d['fakeAuthor']
         uu['path_cover'] = 'data_out/_images/hi/' + titulo + '.jpg'
@@ -762,7 +762,6 @@ def test_voices_en(model, lista=None, d_capitulos=None):
     if lista is None:
         import random
         lista = random.choices(model.speakers, k=4)
-
 
     for vo in lista:
         print(vo)
