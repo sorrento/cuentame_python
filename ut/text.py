@@ -1,4 +1,4 @@
-from u_base import list_min_pos
+from base import list_min_pos
 
 MONEDA_SINGULAR = 'bolivar'
 MONEDA_PLURAL = 'bolivares'

@@ -28,11 +28,11 @@ def tf_idf_preprocessing(doc_list, kwargs):
     if kwargs.get("tfidf_stop_words"):
         if kwargs.get("tfidf_strip_accents"):
             accents = 'ascii'
-            with open('./data/stopwords_ascii.txt', 'r', encoding='utf-8') as fs:
+            with open('../data/stopwords_ascii.txt', 'r', encoding='utf-8') as fs:
                 stopwords = fs.read().splitlines()
         else:
             accents = None
-            with open('./data/stopwords.txt', 'r', encoding='utf-8') as fs:
+            with open('../data/stopwords.txt', 'r', encoding='utf-8') as fs:
                 stopwords = fs.read().splitlines()
     else:
         stopwords = None

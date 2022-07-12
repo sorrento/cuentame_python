@@ -1,5 +1,5 @@
-from u_base import win_exe
-from u_io import files_remove
+from base import win_exe
+from io import files_remove
 
 
 def wav2mp3(titulo):

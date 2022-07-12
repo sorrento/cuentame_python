@@ -23,11 +23,11 @@
 import pandas as pd
 
 from mongo import get_db, get_colls
-from u_base import save_df, json_save, json_read, json_update
-from u_textmining import get_word_matrix
+from ut.base import save_df, json_save, json_read, json_update
+from ut.textmining import get_word_matrix
 from utils import get_fakes, get_frecuencia_words, agrega_a_dicc, quita_numeros, get_books, \
     cabeza_y_cola, corta, crea_capsulas, rompe_parrafo, get_book_datas, SUMMARIES_JSON,seleccion_txt,txt_read
-from u_io import get_filename
+from ut.io import get_filename
 # -
 
 PATH_CALIBRE = 'c:/Users/milen/Biblioteca de calibre/'

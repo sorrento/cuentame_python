@@ -26,12 +26,11 @@
 # %load_ext autoreload
 # %autoreload 2
 
-from u_base import json_read, json_save, make_folder, json_update
+from ut.base import json_read, json_save, make_folder, json_update
 from utils import crea_capsulas_max, get_parrafos, get_final_parrfs, speakers_test, get_df_capitulos, \
     get_dic_capitulos, update_di_capi, procesa_capitulo, get_book_datas, SUMMARIES_JSON, sample_speaker, test_voices_en, \
-    lee, CONTENT_JSON
-from u_text import divide_texto_en_dos
-from u_textmining import palabras_representativas
+    CONTENT_JSON
+from ut.textmining import palabras_representativas
 
 LIM = 850  # largo de las cápsulas, límite de lo que puede leer el sinte
 # -

@@ -24,10 +24,10 @@
 # +
 from PIL import Image
 from ipywidgets import fixed, interactive
-from u_images import crop
+from ut.images import crop
 from utils import get_books, get_image_path, upload_lib_summary, get_book_datas
-from u_io import get_filename
-from u_base import json_read
+from ut.io import get_filename
+from ut.base import json_read
 
 PATH_CALIBRE = 'c:/Users/milen/Biblioteca de calibre/'
 # -
