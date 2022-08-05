@@ -1,8 +1,11 @@
 import time
-from datetime import datetime
+import pandas as pd
 import numpy as np
+from datetime import datetime
 
 FORMAT_DATE = "%Y%m%d"
+FORMAT_CLASSIC = '%Y-%m-%d'
+FORMAT_GRINGO = '%m/%d/%Y'
 FORMAT_DATETIME = '%Y-%m-%d %H:%M:%S.%f'
 FORMAT_UTC = '%Y-%m-%dT%H:%M:%S.%fZ'
 FORMAT_UTC2 = '%Y-%m-%d %H:%M:%S.%f+00:00'
@@ -36,9 +39,10 @@ def tardado(lista: list):
     return elapsed
 
 
-def json_save(dic, path, datos_desc=''):
+def json_save(dic, path, datos_desc='', indent=None):
     """
 
+    :param indent:
     :param dic:
     :param path:
     :param datos_desc: sólo para mostrar en un print
@@ -47,7 +51,10 @@ def json_save(dic, path, datos_desc=''):
     path2 = path + '.json'
     print('** Guardado los datos ' + datos_desc + ' en {}'.format(path2))
     with open(path2, 'w', encoding="utf-8") as outfile:
-        json.dump(dic, outfile, ensure_ascii=False)
+        if indent is None:
+            json.dump(dic, outfile, ensure_ascii=False)
+        else:
+            json.dump(dic, outfile, ensure_ascii=False, indent=indent)
 
 
 def json_read(json_file, keys_as_integer=False):
@@ -138,14 +145,18 @@ def abslog(x):
     return y
 
 
-def save_df(df, path, name, save_index=False, append_size=True):
+def df_save(df, path, name, save_index=False, append_size=True):
+    import os
     if append_size:
         middle = '_' + str(round(df.shape[0] / 1000)) + 'k_' + str(df.shape[1])
     else:
         middle = ''
 
+    if not os.path.isdir(path):
+        make_folder(path)
+
     filename = path + '/' + name + middle + '.csv'
-    print('  ** Guardando dataset en {}'.format(filename))
+    print('** Guardando dataset en {}'.format(filename))
     df.to_csv(filename, index=save_index)
 
     return filename
@@ -166,11 +177,17 @@ def in_k(n, dec=0):
     return str(round(n / 1000, dec)) + 'k'
 
 
-def time_from_str(s, formato):
-    return datetime.strptime(s, formato)
+def time_from_str(s, formato, silent=False):
+    # https://www.programiz.com/python-programming/datetime/strptime
+    try:
+        res = datetime.strptime(s, formato)
+    except Exception as e:
+        if not silent: print(e)
+        res = 'no_date'
+    return res
 
 
-def time_to_str(t, formato):
+def time_to_str(t, formato=FORMAT_DATE):
     return t.strftime(formato)
 
 
@@ -244,3 +261,36 @@ def json_update_file(path, dic):
     else:
         j = dic
     json_save(j, path)
+
+
+def get_iso_week_from_date(date):
+    """Return the ISO week from a date.
+
+    Args:
+        date (str): Date
+
+    Returns:
+        week (int): ISO week
+    """
+    date = pd.to_datetime(date)
+    return date.isocalendar()
+
+
+def get_start_date_of_isoweek(year, week, date_format='datetime'):
+    """
+    Get the start date of the given ISO week using isocalendar()
+
+    Args:
+        year (int): Year, i.e. 2022
+        week (int): Week, i.e. 34
+        date_format (string): Format of the returned date, default is datetime
+
+    Returns:
+        datetime.date: Start date of the given ISO week
+    """
+    from isoweek import Week
+
+    if date_format == 'datetime':
+        return Week(year, week).monday()
+    else:
+        return Week(year, week).monday().strftime(date_format)
