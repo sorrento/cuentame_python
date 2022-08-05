@@ -145,7 +145,7 @@ han trnasformado en txt en el día más reciente
 
 
 def get_books(path):
-    files = seleccion_txt(path)
+    files, _ = seleccion_txt(path)
     doc_list = [txt_read(x) for x in files]
     return doc_list, files
 
@@ -743,7 +743,12 @@ def get_book_datas(pat):
     from PIL import Image
     d_summaries = json_read(SUMMARIES_JSON)
     titles = sorted(list(d_summaries.keys()))
-    titulo = [x for x in titles if pat in x][0]
+    matches = [x for x in titles if pat in x]
+    if len(matches) > 0:
+        titulo = matches[0]
+    else:
+        print('No hay matches en \n{}'.format(titles))
+        return None, None, None, None
     print(titulo)
     d_summary = d_summaries[titulo]
     texto = txt_read(d_summary['path'])
@@ -760,14 +765,21 @@ def sample_speaker(model, d):
     return lee(model, txt, speaker=d['speaker'])
 
 
-def test_voices_en(model, lista=None, d_capitulos=None):
+def test_voices_en(model, lista=None, d_capitulos=None, n=4, avoid=None):
     txt = d_capitulos[1]['capsulas'][0][:230] if (d_capitulos is not None) else SAMPLE_EN
     print(txt)
 
     if lista is None:
         import random
-        lista = random.choices(model.speakers, k=4)
+        all = model.speakers
+        if avoid is None:
+            available = all
+        else:
+            available = list(set(all) - set(avoid))
+        lista = random.sample(available, k=n)
 
     for vo in lista:
         print(vo)
         display(lee(model, txt, speaker=vo))
+
+    return lista

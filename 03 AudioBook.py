@@ -39,7 +39,7 @@ LIM = 850  # largo de las cápsulas, límite de lo que puede leer el sinte
 # Tiene que ser un libro ya procesado, así no tengo que cortar la cabeza y cola desde aquí
 
 # +
-pat = 'andki' # <<<<<<
+pat = 'Clock' # <<<<<< poner parte del título
 
 # d_summaries = json_read(SUMMARIES_JSON)
 # # print(d_summaries)
@@ -61,10 +61,7 @@ txt, im, titulo, d_summary = get_book_datas(pat)
 # d_summaries = json_read(SUMMARIES_JSON)
 # ini = 91  # >>>
 # fin = 3350  # >>>
-
 # d_summaries[titulo]['min'], d_summaries[titulo]['max'] = ini, fin
-
-
 # json_save(d_summaries, SUMMARIES_JSON)
 # -
 
@@ -117,7 +114,7 @@ json_save(d_capitulos, path_book + CONTENT_JSON)
 
 # ### 2.1 Init
 
-# Atentos a si hay un modelo más moderno que `v3_es`
+# Atentos a si hay un modelo más moderno que `v3_es`para castellano
 
 # +
 import torch
@@ -154,6 +151,8 @@ model, example_text = torch.hub.load(repo_or_dir='snakers4/silero-models',
 model.to(device)  # gpu or cpu
 # -
 
+sps = [x for x in model.speakers if x != 'random']
+
 # Atentos a si **aparecen nuevas voces**
 
 d_capitulos[1]['capsulas'][0][:450]
@@ -166,8 +165,12 @@ if language == 'es':
 #                  txt='Millonarios por una semana.\n Cuando no se tiene una chaucha en el bolsillo, no es muy amplia la gama de actividades elegibles para matar el tiempo. Con Diego y Vittorio nos juntábamos casi todos los d'
                  )
 
+# Probamos varios speakers EN aleatorios con el texto que tenemos entre manos:
+
+# ### speakers, random voice
+
+
 # +
-# speakers, random voice
 if 'speaker' not in d_summary:
     if language == 'es':
         speaker = 'es_1'
@@ -175,7 +178,7 @@ if 'speaker' not in d_summary:
         import random
 
         best_en = ['en_' + str(i) for i in [33, 50, 61, 75, 94]]
-        speaker = random.choice(best_en)
+        speaker = random.sample(best_en)
 
     # update fichero
     d_summary['speaker'] = speaker
@@ -192,22 +195,27 @@ else:
 # json_update({titulo: d_summary}, SUMMARIES_JSON)
 # -
 
-test_voices_en(model, best_en)
+probados_acc=[]
 
-sample_speaker(model, d_summary)
+probados=test_voices_en(model, d_capitulos=d_capitulos, n=10, avoid=probados_acc)
+probados_acc=probados_acc+probados
 
-test_voices_en(model, d_capitulos= d_capitulos)
+probados_acc
+
+# [70, 78, 79]
+best=[19,30, 58,77,70]
+_=test_voices_en(model, d_capitulos=d_capitulos, lista=['en_'+str(x) for x in best])
+
+### winner
+speaker='en_30'
+
+from utils import lee
+lee(model, 'this is 230', sps[19]) # todo leer números en inglés
 
 # # 3. Creación de mp3 de cada capítulo
 
 path_json = 'data_out/{}/{}'.format(titulo, CONTENT_JSON)
 d_capitulos = json_read(path_json, keys_as_integer=True)
-
-# +
-# sps=['es_0', 'es_1', 'es_2']
-
-speaker='en_32'
-# -
 
 ini = 1 # mínimo es 1
 for i_cap in range(ini, 25 + 1):

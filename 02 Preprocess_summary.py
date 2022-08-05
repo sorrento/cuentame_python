@@ -13,7 +13,7 @@
 #     name: python3
 # ---
 
-# - recortamos la imagen de acuerdo a dónde no hay texto
+# - Recortamos la imagen de acuerdo a dónde no hay texto
 #
 # # todo:
 # - insertamos el registro del libro usando parse e incluyendo la imagen
@@ -52,7 +52,14 @@ if im.size[0] > 700:
     im = im.reduce(2)
 im.reduce(4)
 
-u = interactive(crop, f=(0.1, 1, 0.05), sx=(1, int(im.size[0] * .5)), sy=(1, int(im.size[1] * .5)), img=fixed(im))
+im.size
+
+int(im.size[1] * .5)
+
+u = interactive(crop, f=(0.1, 1, 0.05),
+                sx=(1, int(im.size[0] * .5)),
+                sy=(1, int(im.size[1] * .9)),
+                img=fixed(im))
 u
 
 # +

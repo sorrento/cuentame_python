@@ -24,15 +24,15 @@ def tf_idf_preprocessing(doc_list, kwargs):
         doc_freq : NumPy array
             Document frequency for each token in vocab
     """
-
+    folder = 'ut/data/'
     if kwargs.get("tfidf_stop_words"):
         if kwargs.get("tfidf_strip_accents"):
             accents = 'ascii'
-            with open('../data/stopwords_ascii.txt', 'r', encoding='utf-8') as fs:
+            with open(folder + 'stopwords_ascii.txt', 'r', encoding='utf-8') as fs:
                 stopwords = fs.read().splitlines()
         else:
             accents = None
-            with open('../data/stopwords.txt', 'r', encoding='utf-8') as fs:
+            with open(folder + 'stopwords.txt', 'r', encoding='utf-8') as fs:
                 stopwords = fs.read().splitlines()
     else:
         stopwords = None
@@ -184,7 +184,7 @@ def tf_idf_keywords(docs, vector_matrix, vocab, doc_freq, num_keywords):
         # Get terms with highest tf-idf score
         pos = vect_text.argsort().tolist()[0][-num_keywords:][::-1]
         # Covert to document-wise term frequency
-        sc = pd.DataFrame({'vect': np.ravel(vect_text), 'freq':np.ravel(doc_freq), })
+        sc = pd.DataFrame({'vect': np.ravel(vect_text), 'freq': np.ravel(doc_freq), })
         display(sc)
         vect_text = np.multiply(vect_text, doc_freq)
         vect_text = vect_text[0, pos].tolist()[0]

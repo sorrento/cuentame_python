@@ -2,6 +2,7 @@ import time
 import pandas as pd
 import numpy as np
 from datetime import datetime
+from ut.io import has_extension
 
 FORMAT_DATE = "%Y%m%d"
 FORMAT_CLASSIC = '%Y-%m-%d'
@@ -19,6 +20,7 @@ def make_folder(path, verbose=True):
             os.mkdir(path)
         else:
             if verbose: print('Ya existe: {}'.format(path))
+        return path
     except OSError:
         print('Ha fallado la creación de la carpeta %s' % path)
 
@@ -48,7 +50,13 @@ def json_save(dic, path, datos_desc='', indent=None):
     :param datos_desc: sólo para mostrar en un print
     """
     import json
-    path2 = path + '.json'
+
+    if has_extension(path):
+        path2 = path
+    else:
+        print('{} no tiene extensión, la agregamos'.format(path))
+        path2 = path + '.json'
+
     print('** Guardado los datos ' + datos_desc + ' en {}'.format(path2))
     with open(path2, 'w', encoding="utf-8") as outfile:
         if indent is None:

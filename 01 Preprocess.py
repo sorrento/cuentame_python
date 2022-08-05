@@ -23,7 +23,7 @@
 import pandas as pd
 
 from mongo import get_db, get_colls
-from ut.base import save_df, json_save, json_read, json_update
+from ut.base import df_save, json_save, json_read, json_update
 from ut.textmining import get_word_matrix
 from utils import get_fakes, get_frecuencia_words, agrega_a_dicc, quita_numeros, get_books, \
     cabeza_y_cola, corta, crea_capsulas, rompe_parrafo, get_book_datas, SUMMARIES_JSON,seleccion_txt,txt_read
@@ -42,14 +42,17 @@ last, all_= seleccion_txt(PATH_CALIBRE)
 book= get_filename(last[0], True)
 book
 
+# +
 # ii) alternativamente, por patrón
-pat='Huasca'#<<<<<<
-book=[get_filename(x, True) for x in all_ if pat in x][0]
-book
+# pat='Huasca'#<<<<<<
+# book=[get_filename(x, True) for x in all_ if pat in x][0]
+# book
+# -
 
 file=[x for x in all_ if book in x]
 
-# libros de referencia para hacer el tf-idf
+# ### a.1) libros de referencia para hacer el tf-idf
+
 date_es=20220703 if lang== 'EN' else 20200504 
 files_es, _= seleccion_txt(PATH_CALIBRE, fecha=date_es)
 files=file+files_es
@@ -90,15 +93,15 @@ j = json_read(SUMMARIES_JSON)
 titles = sorted(list(j.keys()))
 titles
 
-texto, img, titulo, d_summary = get_book_datas('andk')
+texto, img, titulo, d_summary = get_book_datas('work')
 
 # #### Continuamos
 
-partes, df = cabeza_y_cola(texto, 30)
+partes, df = cabeza_y_cola(texto, 50)
 
 # +
-fin = 464  # >>>
-ini = 1  # >>>
+fin = 203  # >>>
+ini = 7  # >>>
 
 
 d_summary['min'], d_summary['max'] = ini, fin
