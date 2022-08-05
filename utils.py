@@ -556,6 +556,11 @@ def lee(model,
 
 
 def reemplaza_nums(new_string):
+    """
+convierte los numero en un texto en strings con los números en palabras
+    :param new_string:
+    :return:
+    """
     import re
     # new_string = 'Rose67lilly78Jasmine228Tulip'
     new_result = re.findall('[0-9]+', new_string)

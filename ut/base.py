@@ -1,15 +1,21 @@
 import time
+from datetime import datetime
+import numpy as np
+
+FORMAT_DATE = "%Y%m%d"
+FORMAT_DATETIME = '%Y-%m-%d %H:%M:%S.%f'
+FORMAT_UTC = '%Y-%m-%dT%H:%M:%S.%fZ'
+FORMAT_UTC2 = '%Y-%m-%d %H:%M:%S.%f+00:00'
 
 
-def make_folder(path):
+def make_folder(path, verbose=True):
     import os
     try:
         if not os.path.isdir(path):
             print('Creando directorio ', path)
             os.mkdir(path)
         else:
-            print('Ya existe: {}'.format(path))
-        return path + '/'
+            if verbose: print('Ya existe: {}'.format(path))
     except OSError:
         print('Ha fallado la creación de la carpeta %s' % path)
 
@@ -38,8 +44,9 @@ def json_save(dic, path, datos_desc=''):
     :param datos_desc: sólo para mostrar en un print
     """
     import json
-    print('** Guardado los datos ' + datos_desc + ' en {}'.format(path))
-    with open(path, 'w', encoding="utf-8") as outfile:
+    path2 = path + '.json'
+    print('** Guardado los datos ' + datos_desc + ' en {}'.format(path2))
+    with open(path2, 'w', encoding="utf-8") as outfile:
         json.dump(dic, outfile, ensure_ascii=False)
 
 
@@ -63,21 +70,32 @@ def json_update(j, path):
     json_save(jj, path)
 
 
-def get_now():
-    ct = now()
+def get_now(utc=False):
+    ct = now(utc)
     # ts = ct.timestamp()
     # print("timestamp:-", ts)
 
     return str(ct)  # podríamos quedarnos con el objeton (sin str)
 
 
-def now():
-    import datetime
-    return datetime.datetime.now()
+def now(utc=False):
+    from datetime import timezone, datetime
+    if utc:
+        tz = timezone.utc
+    else:
+        tz = None
+
+    return datetime.now(tz)
 
 
-def get_now_format(f="%Y%m%d"):
-    ct = now()
+def get_now_format(f=FORMAT_DATE, utc=False):
+    """
+
+    :param utc:
+    :param f: ver https://pythonexamples.org/python-datetime-format/
+    :return:
+    """
+    ct = now(utc)
     return ct.strftime(f)
 
 
@@ -144,6 +162,43 @@ def win_exe(cmd):
     return out
 
 
+def in_k(n, dec=0):
+    return str(round(n / 1000, dec)) + 'k'
+
+
+def time_from_str(s, formato):
+    return datetime.strptime(s, formato)
+
+
+def time_to_str(t, formato):
+    return t.strftime(formato)
+
+
+def seq_len(ini, n, step):
+    """
+crea una secuencia de n enteros, a distancia step
+    :param n:
+    :param step:
+    :param ini:
+    :return:
+    """
+    end = ini + step * (n + 1)
+    return list(np.arange(ini, end, step)[:n])
+
+
+def nearest(x, lista):
+    """
+devuelve el número más cercano a x de la lista
+    :param x:
+    :param lista:
+    :return:
+    """
+    deltas = [abs(s - x) for s in lista]
+    pos = list_min_pos(deltas)
+
+    return lista[pos]
+
+
 def list_min_pos(lista):
     """
 da la (primera) posición del elemento más pequeño
@@ -152,3 +207,40 @@ da la (primera) posición del elemento más pequeño
     """
     mi = min(lista)
     return lista.index(mi)
+
+
+def json_from_string(s):
+    import json
+    return json.loads(s.replace("'", "\""))
+
+
+def list_freqs(myList):
+    frequencyDict = dict()
+    visited = set()
+    listLength = len(myList)
+    for i in range(listLength):
+        if myList[i] in visited:
+            continue
+        else:
+            count = 0
+            element = myList[i]
+            visited.add(myList[i])
+            for j in range(listLength - i):
+                if myList[j + i] == element:
+                    count += 1
+            frequencyDict[element] = count
+    #     print("Input list is:", myList)
+    #     print("Frequency of elements is:")
+    #     print(frequencyDict)
+    return frequencyDict
+
+
+def json_update_file(path, dic):
+    import os
+    existe = os.path.exists(path)
+    if existe:
+        j = json_read(path)
+        j.update(dic)
+    else:
+        j = dic
+    json_save(j, path)
