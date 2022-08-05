@@ -55,6 +55,16 @@ CIENTOS = (
 )
 
 
+def number_to_text(number, language):
+    if language == 'es':
+        res = numero_a_letras(number)
+    elif language == 'en':
+        res = number_to_text_en(number)
+    else:
+        print('No es ninguno de los idiomas configurados')
+    return res
+
+
 def numero_a_letras(numero):
     numero_entero = int(numero)
     if numero_entero > MAX_NUMERO:
@@ -189,3 +199,12 @@ def divide_texto_en_dos(txt):
     txt1 = sep.join(ss[:nn]) + sep
     txt2 = sep.join(ss[nn:])
     return txt1, txt2
+
+
+def number_to_text_en(number):
+    import inflect
+
+    inflector = inflect.engine()
+
+    words = inflector.number_to_words(number)
+    return words

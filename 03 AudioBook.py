@@ -130,6 +130,16 @@ available_languages = list(models.tts_models.keys())
 for lang in available_languages:
     modeli = list(models.tts_models.get(lang).keys())
     print(f'Available models for {lang}: {modeli}')
+# -
+
+#verificación de speakers en españo, suele haber 3
+model_id = 'v3_es'
+language='es'
+model, example_text = torch.hub.load(repo_or_dir='snakers4/silero-models',
+                                     model='silero_tts',
+                                     language=language,
+                                     speaker=model_id)
+model.speakers
 
 # +
 # configuración
@@ -153,6 +163,8 @@ model.to(device)  # gpu or cpu
 
 sps = [x for x in model.speakers if x != 'random']
 
+sps
+
 # Atentos a si **aparecen nuevas voces**
 
 d_capitulos[1]['capsulas'][0][:450]
@@ -175,10 +187,10 @@ if 'speaker' not in d_summary:
     if language == 'es':
         speaker = 'es_1'
     else:
-        import random
+        
 
         best_en = ['en_' + str(i) for i in [33, 50, 61, 75, 94]]
-        speaker = random.sample(best_en)
+        speaker = random.choice(best_en)
 
     # update fichero
     d_summary['speaker'] = speaker
@@ -231,3 +243,17 @@ for i_cap in range(ini, 25 + 1):
 # print(len(txt))
 # print(txt)
 # lee(model, txt[:750], speaker)
+# -
+
+pip install inflect
+
+# +
+import inflect
+
+inflector = inflect.engine()
+
+words = inflector.number_to_words(54321)
+print(words)
+# -
+
+
