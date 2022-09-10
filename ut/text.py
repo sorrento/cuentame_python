@@ -57,27 +57,28 @@ CIENTOS = (
 
 def number_to_text(number, language):
     if language == 'es':
-        res = numero_a_letras(number)
+        res = _numero_a_letras(number)
     elif language == 'en':
-        res = number_to_text_en(number)
+        res = _number_to_text_en(number)
     else:
         print('No es ninguno de los idiomas configurados')
+        return None
     return res
 
 
-def numero_a_letras(numero):
+def _numero_a_letras(numero):
     numero_entero = int(numero)
     if numero_entero > MAX_NUMERO:
         raise OverflowError('Número demasiado alto')
     if numero_entero < 0:
-        return 'menos %s' % numero_a_letras(abs(numero))
+        return 'menos %s' % _numero_a_letras(abs(numero))
 
     letras_decimal = ''
     parte_decimal = int(round((abs(numero) - abs(numero_entero)) * 100))
     if parte_decimal > 9:
-        letras_decimal = 'punto %s' % numero_a_letras(parte_decimal)
+        letras_decimal = 'punto %s' % _numero_a_letras(parte_decimal)
     elif parte_decimal > 0:
-        letras_decimal = 'punto cero %s' % numero_a_letras(parte_decimal)
+        letras_decimal = 'punto cero %s' % _numero_a_letras(parte_decimal)
 
     if numero_entero <= 99:
         resultado = leer_decenas(numero_entero)
@@ -111,9 +112,9 @@ def numero_a_moneda(numero):
         moneda = MONEDA_SINGULAR
     else:
         moneda = MONEDA_PLURAL
-    letras = numero_a_letras(numero_entero)
+    letras = _numero_a_letras(numero_entero)
     letras = letras.replace('uno', 'un')
-    letras_decimal = 'con %s %s' % (numero_a_letras(parte_decimal).replace('uno', 'un'), centimos)
+    letras_decimal = 'con %s %s' % (_numero_a_letras(parte_decimal).replace('uno', 'un'), centimos)
     letras = '%s %s %s' % (letras, moneda, letras_decimal)
     return letras
 
@@ -201,7 +202,7 @@ def divide_texto_en_dos(txt):
     return txt1, txt2
 
 
-def number_to_text_en(number):
+def _number_to_text_en(number):
     import inflect
 
     inflector = inflect.engine()

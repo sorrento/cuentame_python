@@ -23,23 +23,26 @@
 import pandas as pd
 
 from mongo import get_db, get_colls
-from ut.base import df_save, json_save, json_read, json_update
+from ut.base import json_save, json_read, json_update
 from ut.textmining import get_word_matrix
 from utils import get_fakes, get_frecuencia_words, agrega_a_dicc, quita_numeros, get_books, \
-    cabeza_y_cola, corta, crea_capsulas, rompe_parrafo, get_book_datas, SUMMARIES_JSON,seleccion_txt,txt_read
+    cabeza_y_cola, corta, crea_capsulas, rompe_parrafo, get_book_datas, SUMMARIES_JSON, seleccion_txt, txt_read, \
+    elige_libros_aleatorios
 from ut.io import get_filename
 # -
 
 PATH_CALIBRE = 'c:/Users/milen/Biblioteca de calibre/'
 lang = "EN"  # >>>
 
+[print(x) for x in elige_libros_aleatorios(1)]
+
 # ## a) Un libro en particular
 
-one_book=True
+one_book = True
 
 # i) por el más reciente
-last, all_= seleccion_txt(PATH_CALIBRE)
-book= get_filename(last[0], True)
+last, all_ = seleccion_txt(PATH_CALIBRE)
+book = get_filename(last[0], True)
 book
 
 # +
@@ -49,13 +52,13 @@ book
 # book
 # -
 
-file=[x for x in all_ if book in x]
+file = [x for x in all_ if book in x]
 
 # ### a.1) libros de referencia para hacer el tf-idf
 
-date_es=20220703 if lang== 'EN' else 20200504 
-files_es, _= seleccion_txt(PATH_CALIBRE, fecha=date_es)
-files=file+files_es
+date_es = 20220703 if lang == 'EN' else 20200504
+files_es, _ = seleccion_txt(PATH_CALIBRE, fecha=date_es)
+files = file + files_es
 doc_list = [txt_read(x) for x in files]
 
 # ## b) De última extracción calibre
@@ -72,7 +75,7 @@ vector_matrix, vocab, _ = get_word_matrix(doc_list)
 dic_fake, di_counts = get_fakes(doc_list, files, vector_matrix, vocab, lang)
 
 if one_book:
-    dic_fake={0:dic_fake[0]}
+    dic_fake = {0: dic_fake[0]}
 
 pd.DataFrame.from_dict(dic_fake)
 
@@ -93,16 +96,15 @@ j = json_read(SUMMARIES_JSON)
 titles = sorted(list(j.keys()))
 titles
 
-texto, img, titulo, d_summary = get_book_datas('work')
+texto, img, titulo, d_summary = get_book_datas('Skin')
 
 # #### Continuamos
 
-partes, df = cabeza_y_cola(texto, 50)
+partes, df = cabeza_y_cola(texto, 300)
 
 # +
-fin = 203  # >>>
-ini = 7  # >>>
-
+fin = 2271  # >>>
+ini = 34  # >>>
 
 d_summary['min'], d_summary['max'] = ini, fin
 # -

@@ -44,7 +44,7 @@ im = Image.open(images[i])
 
 # #### b) Por nombre
 
-txt, im, titulo, d = get_book_datas('andki')
+txt, im, titulo, d = get_book_datas('reak')
 
 # #### Continuamos
 
@@ -53,8 +53,6 @@ if im.size[0] > 700:
 im.reduce(4)
 
 im.size
-
-int(im.size[1] * .5)
 
 u = interactive(crop, f=(0.1, 1, 0.05),
                 sx=(1, int(im.size[0] * .5)),

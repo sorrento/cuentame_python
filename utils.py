@@ -12,7 +12,7 @@ from secret_keys import *
 from ut.base import get_now_format, inicia, tardado, json_read, make_folder, json_update
 from ut.io import lista_files_recursiva, fecha_mod, get_filename, txt_read, txt_write
 from ut.plots import plot_hist
-from ut.text import numero_a_letras, divide_texto_en_dos
+from ut.text import _numero_a_letras, divide_texto_en_dos, number_to_text
 from ut.textmining import get_candidatos_nombres_all, pick
 
 SAMPLE_EN = 'The monitor lady smiled very nicely and tousled his hair and said, "Andrew, I suppose by now you\'re just absolutely sick of having that horrid monitor. Well, I have good news for you. That monitor is '
@@ -555,7 +555,7 @@ def lee(model,
     return au
 
 
-def reemplaza_nums(new_string):
+def reemplaza_nums(new_string, lan):
     """
 convierte los numero en un texto en strings con los números en palabras
     :param new_string:
@@ -568,7 +568,7 @@ convierte los numero en un texto en strings con los números en palabras
     if len(new_result) == 0:
         return new_string
 
-    dic = {x: numero_a_letras(int(x)) for x in new_result}
+    dic = {x: number_to_text(int(x), lan) for x in new_result}
     for key, value in dic.items():
         # Replace key character with value character in string
         new_string = new_string.replace(key, value)
@@ -576,7 +576,7 @@ convierte los numero en un texto en strings con los números en palabras
 
 
 def wav_generator(txt, voz, i_cap, path, model, write_txt=True,
-                  sample_rate=48000, put_accent=True, put_yo=True, n_caps='?', i_capitulo='?'):
+                  sample_rate=48000, put_accent=True, put_yo=True, n_caps='?', i_capitulo='?', lan='en'):
     t = inicia(' capsula = {}/{}. Capitulo:{}'.format(i_cap, n_caps, i_capitulo))
     print(txt[0:30])
 
@@ -588,7 +588,7 @@ def wav_generator(txt, voz, i_cap, path, model, write_txt=True,
         au_seg = AudioSegment.from_mp3(mp_)
     else:
         try:
-            audio = model.apply_tts(text=reemplaza_nums(txt),
+            audio = model.apply_tts(text=reemplaza_nums(txt, lan),
                                     speaker=voz,
                                     sample_rate=sample_rate,
                                     put_accent=put_accent,
@@ -695,7 +695,7 @@ def get_mp3_tag(d_capitulo, i_capitulo, titulo):
 
 
 def procesa_capitulo(d_capitulos, i_capitulo, titulo, path_book, model, speaker,
-                     debug_mode=False, speakers=None):
+                     debug_mode=False, speakers=None, lan='en'):
     import time
     d_capitulo = d_capitulos[i_capitulo]
 
@@ -721,7 +721,7 @@ def procesa_capitulo(d_capitulos, i_capitulo, titulo, path_book, model, speaker,
             speaker = random.choice(speakers)
 
         au_capsula = wav_generator(capsula, speaker, k, path_ch, model,
-                                   n_caps=str(n_caps), i_capitulo=i_capitulo)
+                                   n_caps=str(n_caps), i_capitulo=i_capitulo, lan=lan)
         print(str(k))
         display(au_capsula)
         au_acc = au_acc + au_capsula + AudioSegment.silent(450)
@@ -766,16 +766,16 @@ def sample_speaker(model, d):
 
 
 def test_voices_en(model, lista=None, d_capitulos=None, n=4, avoid=None):
-    txt = d_capitulos[1]['capsulas'][0][:230] if (d_capitulos is not None) else SAMPLE_EN
+    txt = d_capitulos['1']['capsulas'][0][:230] if (d_capitulos is not None) else SAMPLE_EN
     print(txt)
 
     if lista is None:
         import random
-        all = model.speakers
+        all_ = model.speakers
         if avoid is None:
-            available = all
+            available = all_
         else:
-            available = list(set(all) - set(avoid))
+            available = list(set(all_) - set(avoid))
         lista = random.sample(available, k=n)
 
     for vo in lista:
@@ -783,3 +783,10 @@ def test_voices_en(model, lista=None, d_capitulos=None, n=4, avoid=None):
         display(lee(model, txt, speaker=vo))
 
     return lista
+
+
+def elige_libros_aleatorios(n,
+                            ruta_libros=r"c:\Users\milen\Desktop\del drive\NYT Best Sellers/"):
+    import random
+    lista_libros = lista_files_recursiva(ruta_libros, 'epub', recursiv=True)
+    return random.sample(lista_libros, n)

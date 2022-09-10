@@ -38,32 +38,8 @@ LIM = 850  # largo de las cápsulas, límite de lo que puede leer el sinte
 # ## 1. Selección del libro
 # Tiene que ser un libro ya procesado, así no tengo que cortar la cabeza y cola desde aquí
 
-# +
-pat = 'Clock' # <<<<<< poner parte del título
-
-# d_summaries = json_read(SUMMARIES_JSON)
-# # print(d_summaries)
-# titles = sorted(list(d_summaries.keys()))
-# titulo = [x for x in titles if pat in x][0]
-# print(titulo)
-
-# +
-# d_summary = d_summaries[titulo]
-
-# +
-# texto = txt_read(d_summary['path'])
-# -
-
+pat = 'Skin' # <<<<<< poner parte del título
 txt, im, titulo, d_summary = get_book_datas(pat)
-
-# +
-# apaño, porque parece que se perdiño en alguna parte
-# d_summaries = json_read(SUMMARIES_JSON)
-# ini = 91  # >>>
-# fin = 3350  # >>>
-# d_summaries[titulo]['min'], d_summaries[titulo]['max'] = ini, fin
-# json_save(d_summaries, SUMMARIES_JSON)
-# -
 
 df = get_parrafos(titulo)
 df
@@ -112,6 +88,8 @@ json_save(d_capitulos, path_book + CONTENT_JSON)
 
 # ## 2. AUDIO
 
+d_capitulos=json_read(path_book + CONTENT_JSON)
+
 # ### 2.1 Init
 
 # Atentos a si hay un modelo más moderno que `v3_es`para castellano
@@ -130,16 +108,16 @@ available_languages = list(models.tts_models.keys())
 for lang in available_languages:
     modeli = list(models.tts_models.get(lang).keys())
     print(f'Available models for {lang}: {modeli}')
-# -
 
+# +
 #verificación de speakers en españo, suele haber 3
-model_id = 'v3_es'
-language='es'
-model, example_text = torch.hub.load(repo_or_dir='snakers4/silero-models',
-                                     model='silero_tts',
-                                     language=language,
-                                     speaker=model_id)
-model.speakers
+# model_id = 'v3_es'
+# language='es'
+# model, example_text = torch.hub.load(repo_or_dir='snakers4/silero-models',
+#                                      model='silero_tts',
+#                                      language=language,
+#                                      speaker=model_id)
+# model.speakers
 
 # +
 # configuración
@@ -163,11 +141,11 @@ model.to(device)  # gpu or cpu
 
 sps = [x for x in model.speakers if x != 'random']
 
-sps
-
 # Atentos a si **aparecen nuevas voces**
 
-d_capitulos[1]['capsulas'][0][:450]
+d_capitulos['1']['capsulas'][0][:450]
+
+d_capitulos
 
 # ## Elegir Speaker
 
@@ -226,6 +204,8 @@ lee(model, 'this is 230', sps[19]) # todo leer números en inglés
 
 # # 3. Creación de mp3 de cada capítulo
 
+speaker='en_94'
+
 path_json = 'data_out/{}/{}'.format(titulo, CONTENT_JSON)
 d_capitulos = json_read(path_json, keys_as_integer=True)
 
@@ -245,15 +225,5 @@ for i_cap in range(ini, 25 + 1):
 # lee(model, txt[:750], speaker)
 # -
 
-pip install inflect
-
-# +
-import inflect
-
-inflector = inflect.engine()
-
-words = inflector.number_to_words(54321)
-print(words)
-# -
-
-
+#test numeros
+lee(model,'This is the year 1998')
