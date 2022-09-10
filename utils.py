@@ -543,8 +543,9 @@ def speakers_test(model, put_accent=True, sample_rate=48000, put_yo=True,
 
 
 def lee(model,
-        txt=SAMPLE_ES, speaker='es_1', sample_rate=48000, put_accent=True, put_yo=True):
-    audio = model.apply_tts(text=txt,
+        txt=SAMPLE_ES, speaker='es_1', sample_rate=48000, put_accent=True, put_yo=True,
+        lan='en'):
+    audio = model.apply_tts(text=reemplaza_nums(txt, lan),
                             speaker=speaker,
                             sample_rate=sample_rate,
                             put_accent=put_accent,

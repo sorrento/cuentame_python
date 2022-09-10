@@ -193,14 +193,14 @@ probados_acc=probados_acc+probados
 probados_acc
 
 # [70, 78, 79]
-best=[19,30, 58,77,70]
+best=[99]
 _=test_voices_en(model, d_capitulos=d_capitulos, lista=['en_'+str(x) for x in best])
 
 ### winner
 speaker='en_30'
 
 from utils import lee
-lee(model, 'this is 230', sps[19]) # todo leer números en inglés
+lee(model, 'this is 230', 'en_99') # todo leer números en inglés
 
 # # 3. Creación de mp3 de cada capítulo
 
