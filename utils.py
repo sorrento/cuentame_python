@@ -493,7 +493,7 @@ def get_final_parrfs(df, LIM):
     return final, partes
 
 
-def audio_save(au, name, path, mp3=True, show=False, tag=None):
+def audio_save(au, name, path, mp3=True, show=False, tag=None, save_mp3=True):
     tem = 'temp.wav'
     wa = None
     if mp3:
@@ -510,7 +510,8 @@ def audio_save(au, name, path, mp3=True, show=False, tag=None):
 
         wa = AudioSegment.from_wav(tem)
         # wa.export(no, format="mp3", tags=tag).close()
-        wa.export(no, format="mp3").close()
+        if save_mp3:
+            wa.export(no, format="mp3").close()
         os.remove(tem)
     else:
         with open(no, 'wb') as f:
@@ -577,7 +578,7 @@ convierte los numero en un texto en strings con los números en palabras
 
 
 def wav_generator(txt, voz, i_cap, path, model, write_txt=True,
-                  sample_rate=48000, put_accent=True, put_yo=True, n_caps='?', i_capitulo='?', lan='en'):
+                  sample_rate=48000, put_accent=True, put_yo=True, n_caps='?', i_capitulo='?', lan='en', save_mp3=True):
     t = inicia(' capsula = {}/{}. Capitulo:{}'.format(i_cap, n_caps, i_capitulo))
     print(txt[0:30])
 
@@ -596,12 +597,13 @@ def wav_generator(txt, voz, i_cap, path, model, write_txt=True,
                                     put_yo=put_yo
                                     )
             au = Audio(audio, rate=sample_rate)
-            au_seg = audio_save(au, name, path)
+            au_seg = audio_save(au, name, path, save_mp3=save_mp3)
         except Exception as e:
+            # tipicamente ocurre porque es muy largo, así que lo hacemos en dos partes y juntamos
             print('** ERROR: ' + str(e))
             txt1, txt2 = divide_texto_en_dos(txt)
-            au1 = wav_generator(txt1, voz, str(i_cap) + '_a', path, model)
-            au2 = wav_generator(txt1, voz, str(i_cap) + '_b', path, model)
+            au1 = wav_generator(txt1, voz, str(i_cap) + '_a', path, model, save_mp3=False)
+            au2 = wav_generator(txt1, voz, str(i_cap) + '_b', path, model, save_mp3=False)
             au_seg = au1 + au2
 
     if write_txt:
@@ -674,7 +676,9 @@ pone en cada capítulo la información de la "cancion"
 
 
 def get_mp3_tag(d_capitulo, i_capitulo, titulo):
-    tag = {'title':       d_capitulo['song'], 'artist': d_capitulo['singer'], 'album': d_capitulo['album'],
+    tag = {'title':       str(i_capitulo) + ' ' + d_capitulo['song'],
+           'artist':      d_capitulo['singer'],
+           'album':       d_capitulo['album'],
            'Track':       i_capitulo,
            'Genre':       'Ebook',
 
@@ -766,8 +770,11 @@ def sample_speaker(model, d):
     return lee(model, txt, speaker=d['speaker'])
 
 
-def test_voices_en(model, lista=None, d_capitulos=None, n=4, avoid=None):
-    txt = d_capitulos['1']['capsulas'][0][:230] if (d_capitulos is not None) else SAMPLE_EN
+def test_voices_en(model, lista=None, d_capitulos=None, n=4, avoid=None, text=None):
+    if text is None:
+        txt = d_capitulos['1']['capsulas'][0][:230] if (d_capitulos is not None) else SAMPLE_EN
+    else:
+        txt = text[:230]
     print(txt)
 
     if lista is None:
