@@ -12,7 +12,7 @@ from secret_keys import *
 from ut.base import get_now_format, inicia, tardado, json_read, make_folder, json_update
 from ut.io import lista_files_recursiva, fecha_mod, get_filename, txt_read, txt_write
 from ut.plots import plot_hist
-from ut.text import _numero_a_letras, divide_texto_en_dos, number_to_text
+from ut.text import divide_texto_en_dos, number_to_text
 from ut.textmining import get_candidatos_nombres_all, pick
 
 SAMPLE_EN = 'The monitor lady smiled very nicely and tousled his hair and said, "Andrew, I suppose by now you\'re just absolutely sick of having that horrid monitor. Well, I have good news for you. That monitor is '

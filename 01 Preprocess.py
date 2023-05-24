@@ -96,15 +96,15 @@ j = json_read(SUMMARIES_JSON)
 titles = sorted(list(j.keys()))
 titles
 
-texto, img, titulo, d_summary = get_book_datas('Skin')
+texto, img, titulo, d_summary = get_book_datas('Speaker')
 
 # #### Continuamos
 
-partes, df = cabeza_y_cola(texto, 300)
+partes, df = cabeza_y_cola(texto, 58)
 
 # +
-fin = 2271  # >>>
-ini = 34  # >>>
+fin = 3888  # >>>
+ini = 28  # >>>
 
 d_summary['min'], d_summary['max'] = ini, fin
 # -

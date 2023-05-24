@@ -40,7 +40,10 @@ images = [get_image_path(x) for x in files]
 
 i = 0
 titulo = get_filename(files[i], True).split(' - ')[0]
+print(titulo) #ojo que puede estar cortado por Calire si es muy largo... quizas deberíamos cogerlo de la carpeta..
 im = Image.open(images[i])
+
+files[0]
 
 # #### b) Por nombre
 

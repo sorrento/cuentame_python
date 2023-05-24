@@ -26,6 +26,7 @@
 # %load_ext autoreload
 # %autoreload 2
 
+import random
 from ut.base import json_read, json_save, make_folder, json_update
 from utils import crea_capsulas_max, get_parrafos, get_final_parrfs, speakers_test, get_df_capitulos, \
     get_dic_capitulos, update_di_capi, procesa_capitulo, get_book_datas, SUMMARIES_JSON, sample_speaker, test_voices_en, \
@@ -38,7 +39,7 @@ LIM = 850  # largo de las cápsulas, límite de lo que puede leer el sinte
 # ## 1. Selección del libro
 # Tiene que ser un libro ya procesado, así no tengo que cortar la cabeza y cola desde aquí
 
-pat = 'Skin' # <<<<<< poner parte del título
+pat = 'Speaker'  # <<<<<< poner parte del título
 txt, im, titulo, d_summary = get_book_datas(pat)
 
 df = get_parrafos(titulo)
@@ -75,9 +76,10 @@ d_capitulos = get_dic_capitulos(df_capitulos)
 
 capitulos = ['\n '.join(d_capitulos[cap]['capsulas']) for cap in d_capitulos]
 
-capitulos_titles = palabras_representativas(capitulos, l_exclude=d_summary['names'], 
-                                            max_df=.4, #.8  proporción de documentos. si lo bajamos quitamos los muy frecuentes
-                                            min_df=.2)#.2  % de docs. Si lo subo quito palabras poco frecuentes
+capitulos_titles = palabras_representativas(capitulos, l_exclude=d_summary['names'],
+                                            max_df=.4,
+                                            # .8  proporción de documentos. si lo bajamos quitamos los muy frecuentes
+                                            min_df=.2)  # .2  % de docs. Si lo subo quito palabras poco frecuentes
 capitulos_titles
 
 update_di_capi(d_capitulos, capitulos_titles, d_summary, titulo)
@@ -88,7 +90,7 @@ json_save(d_capitulos, path_book + CONTENT_JSON)
 
 # ## 2. AUDIO
 
-d_capitulos=json_read(path_book + CONTENT_JSON)
+d_capitulos = json_read(path_book + CONTENT_JSON)
 
 # ### 2.1 Init
 
@@ -110,7 +112,7 @@ for lang in available_languages:
     print(f'Available models for {lang}: {modeli}')
 
 # +
-#verificación de speakers en españo, suele haber 3
+# verificación de speakers en españo, suele haber 3
 # model_id = 'v3_es'
 # language='es'
 # model, example_text = torch.hub.load(repo_or_dir='snakers4/silero-models',
@@ -152,8 +154,8 @@ d_capitulos
 if language == 'es':
     speakers_test(model,
                   txt=d_capitulos[1]['capsulas'][0][:450]
-#                  txt='Millonarios por una semana.\n Cuando no se tiene una chaucha en el bolsillo, no es muy amplia la gama de actividades elegibles para matar el tiempo. Con Diego y Vittorio nos juntábamos casi todos los d'
-                 )
+                  #                  txt='Millonarios por una semana.\n Cuando no se tiene una chaucha en el bolsillo, no es muy amplia la gama de actividades elegibles para matar el tiempo. Con Diego y Vittorio nos juntábamos casi todos los d'
+                  )
 
 # Probamos varios speakers EN aleatorios con el texto que tenemos entre manos:
 
@@ -165,7 +167,6 @@ if 'speaker' not in d_summary:
     if language == 'es':
         speaker = 'es_1'
     else:
-        
 
         best_en = ['en_' + str(i) for i in [33, 50, 61, 75, 94]]
         speaker = random.choice(best_en)
@@ -177,7 +178,6 @@ if 'speaker' not in d_summary:
 else:
     speaker = d_summary['speaker']
 
-
 # +
 # elegido a mano
 # speaker = 'en_94'  # Sophie
@@ -185,37 +185,49 @@ else:
 # json_update({titulo: d_summary}, SUMMARIES_JSON)
 # -
 
-probados_acc=[]
+probados_acc = []
 
-probados=test_voices_en(model, d_capitulos=d_capitulos, n=10, avoid=probados_acc)
-probados_acc=probados_acc+probados
+text = d_capitulos['1']['capsulas'][2]  # elegimos un texto en particular
+text
+
+probados = test_voices_en(model, d_capitulos=d_capitulos, n=10, avoid=probados_acc, text=text)
+probados_acc = probados_acc + probados
 
 probados_acc
 
-# [70, 78, 79]
-best=[99]
-_=test_voices_en(model, d_capitulos=d_capitulos, lista=['en_'+str(x) for x in best])
+#
+best = [94]
+_ = test_voices_en(model, d_capitulos=d_capitulos, lista=['en_' + str(x) for x in best], text=text)
 
 ### winner
-speaker='en_30'
+speaker = 'en_94'
 
-from utils import lee
-lee(model, 'this is 230', 'en_99') # todo leer números en inglés
+# +
+# from utils import lee
+# lee(model, 'this is 230 idiots in a row.', 'en_99') # todo leer números en inglés
+# -
 
 # # 3. Creación de mp3 de cada capítulo
-
-speaker='en_94'
 
 path_json = 'data_out/{}/{}'.format(titulo, CONTENT_JSON)
 d_capitulos = json_read(path_json, keys_as_integer=True)
 
-ini = 1 # mínimo es 1
+d_capitulos[1]['song']
+
+# +
+from tqdm import tqdm
+
+ini = 1  # mínimo es 1
+pbar = tqdm(total=25)
+
 for i_cap in range(ini, 25 + 1):
     procesa_capitulo(d_capitulos, i_capitulo=i_cap, titulo=titulo, path_book=path_book, model=model,
                      speaker=speaker,
                      debug_mode=False,
-#                      speakers=#sps
-                    )
+                     #                      speakers=#sps
+                     )
+    pbar.update(1)
+pbar.close()
 
 # +
 # Prueba si un cap falla por longitud
@@ -225,5 +237,5 @@ for i_cap in range(ini, 25 + 1):
 # lee(model, txt[:750], speaker)
 # -
 
-#test numeros
-lee(model,'This is the year 1998')
+# test numeros
+lee(model, 'This is the year 1998')
