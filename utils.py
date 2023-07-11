@@ -49,7 +49,7 @@ devuelve un nombre fake, hecho de la concatenación de dos nombres propios que a
     return pick(df_names, 10, 2), df_names, d_all
 
 
-def get_fake_title(vector_matrix, vocab, i, l_authors=None):
+def get_fake_title(vector_matrix, vocab, i, l_authors=None, with_openAI=False):
     """
 genera un título de 3 palabras con las palabras más representivas del texto
     :param vector_matrix:
@@ -72,7 +72,29 @@ genera un título de 3 palabras con las palabras más representivas del texto
     else:
         ejj2 = ejj[~ejj.index.isin([x.lower() for x in l_authors])]
 
-    return pick(ejj2, 15, 3, 'value')
+    ejj2['value'] = ejj2['value'].astype(int)
+
+    if with_openAI:
+        # convert to dict las primeras 20 filas {indice:value}
+        di = ejj2.iloc[:20].to_dict()['value']
+        res = genera_titulo_openAI(di)
+    else:
+        res = pick(ejj2, 15, 3, 'value')  # esto es una lista de 3 palabras, el 15
+
+    return res
+
+
+def genera_titulo_openAI(di):
+    """
+genera un título con la API de OpenAI
+    """
+    prompt=''' 
+    Quiera que me generaras un título de libro, no más de 8 palabras, combinando con sentido las palabras que te daré, considerando su peso
+    ###
+    '''
+    import openai
+    # las keys y contraseñas se 
+    openai.api_key = OPENAI_API_KEY
 
 
 def get_book_data(path):
@@ -341,11 +363,13 @@ que tiene 'ies' (las i que une) y 'texto'. la key es índice de grupo g que part
                 g, n_acc = agrega(grupos, largos, g, n_fut, i, d, partes)
 
         else:
-            if verbose: print('***caemos dentro:', n_fut)
+            if verbose:
+                print('***caemos dentro:', n_fut)
             g, n_acc = agrega(grupos, largos, g, n_fut, i, d, partes)
 
     df['capsula'] = grupos
-    if verbose: plot_hist(largos, 45)
+    if verbose:
+        plot_hist(largos, 45)
 
     return d
 
@@ -377,7 +401,8 @@ que tiene 'ies' (las i que une) y 'texto'. la key es índice de grupo g que part
         q_largos = n_fut > lmax
 
         if q_largos:
-            if verbose: print('  ** >> pasamos', n_fut)
+            if verbose:
+                print('  ** >> pasamos', n_fut)
             largos.append(n_new)  # cerramos el anterior
             g = g + 1
             agg(grupos, g, d, i, partes)
@@ -387,7 +412,8 @@ que tiene 'ies' (las i que une) y 'texto'. la key es índice de grupo g que part
             n_acc = n_fut
 
     df['capsula'] = grupos
-    if verbose: plot_hist(largos, 45)
+    if verbose:
+        plot_hist(largos, 45)
 
     if verbose:
         print('** Máximo largo: {}, mínimo: {}'.format(str(max(largos)), str(min(largos))))
@@ -526,12 +552,13 @@ def audio_save(au, name, path, mp3=True, show=False, tag=None, save_mp3=True):
 def speakers_test(model, put_accent=True, sample_rate=48000, put_yo=True,
                   txt='Formalmente, desde el Acuerdo Marco "Aurora" de 1953, los centros pertenecientes a la red '
                       'mundial debían "trabajar en plena colaboración académica y humana, compartiendo los avances '
-                      'tanto en conocimientos fundamentales como en técnicas.'):
+                      'tanto en conocimientos fundamentales como en técnicas.',
+                      lan='es'):
     print(txt)
     sps = [x for x in model.speakers if x != 'random']
     for sp in sps:
         # print(sp)
-        audio = model.apply_tts(text=reemplaza_nums(txt),
+        audio = model.apply_tts(text=reemplaza_nums(txt, lan='es'),
                                 speaker=sp,
                                 sample_rate=sample_rate,
                                 put_accent=put_accent,
@@ -745,6 +772,12 @@ def procesa_capitulo(d_capitulos, i_capitulo, titulo, path_book, model, speaker,
 
 
 def get_book_datas(pat):
+    '''
+    Devuelve el texto, la imagen, el título y el diccionario de summary, que lo
+    :param pat: patrón de búsqueda
+    :return: texto, im, titulo, d_summary
+
+    '''
     from PIL import Image
     d_summaries = json_read(SUMMARIES_JSON)
     titles = sorted(list(d_summaries.keys()))
