@@ -1,3 +1,7 @@
 /data/diccionario2.csv_81k_2.csv
 /data/config.json
 secrets_k.py
+/data_in/
+/data_out/
+/ut/__pycache__/
+/__pycache__/
