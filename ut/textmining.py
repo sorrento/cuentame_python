@@ -193,8 +193,8 @@ def tf_idf_keywords(docs, vector_matrix, vocab, doc_freq, num_keywords):
         kw = list(zip(vocab[pos], vect_text))
         # Filter numbers and empty occurrences
         kw = [kw_pair for kw_pair in kw if kw_pair[1] > 0
-              and not kw_pair[0].translate(str.maketrans('', '', string.punctuation + ' ')) \
-            .isnumeric()]
+              and not kw_pair[0].translate(str.maketrans('', '', string.punctuation + ' '))
+              .isnumeric()]
         # doc.keywords = kw
         # docs_to_update(kw)
         docs_to_update.append(kw)
@@ -221,7 +221,7 @@ de un df, coge las top rows y selecciona n índices de acuerdo al peso dado por 
     return l
 
 
-def palabras_representativas(lista, l_exclude=None, n_best=3, n_pick=3, max_df=.8, min_df=.2):
+def palabras_representativas(lista, l_exclude=None, n_best=3, n_pick=3, max_df=.8, min_df=.2, sorted=False):
     """
 Forma lista de strings, con las n_pick palabras más representativas de cada texto. Escoge n_pick aleatoriamente
 de las n_best
@@ -235,8 +235,9 @@ de las n_best
     """
     vector_matrix, vocab, doc_freq = get_word_matrix(lista, max_df, min_df)
 
-    def oo(i, n_best, n_pick):
-        ej = pd.melt(pd.DataFrame(vector_matrix[i, :].todense(), columns=vocab))
+    def best_words(i_cap, n_best, n_pick, sorted):
+        # if sorted is True,  we return the higest n_best words, otherwise we return n_pick random words
+        ej = pd.melt(pd.DataFrame(vector_matrix[i_cap, :].todense(), columns=vocab))
         ejj = ej.sort_values('value', ascending=False).set_index('variable')  # preparamos para la funcion pick
 
         # quitamos las palabras
@@ -245,9 +246,23 @@ de las n_best
         else:
             ejj2 = ejj[~ejj.index.isin([x.lower() for x in l_exclude])]
 
-        return ' '.join(pick(ejj2, n_best, n_pick, 'value'))
+        if sorted:
+            import numpy as np
+            df_best = ejj2.head(n_best)
+            # round column value to int
+            df_best['value'] = df_best['value'].apply(lambda x: int(np.round(x, 0)))
+            # dict_best es {palabra: peso}
+            dict_best = dict(zip(df_best.index, df_best.value))
+            return dict_best
+        
+        # el mínimo entre n_pick y el número de palabras que hay
+        n_pick = min(n_pick, len(ejj2))
+        print(f'Cogemos {n_pick} de {n_best} palabras representativas (total: {len(ejj2)} en capítulo {i_cap}  )')
+        res = ' '.join(pick(ejj2, n_best, n_pick, 'value'))
+        print(f' Las primeras son: {res[:100]}')
+        return res
 
-    return [oo(i, n_best, n_pick) for i in range(len(lista))]
+    return [best_words(i_cap, n_best, n_pick, sorted=sorted) for i_cap in range(len(lista))]
 
 
 def get_word_matrix(doc_list, max_df=.8, min_df=.2):

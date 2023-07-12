@@ -8,7 +8,7 @@ from IPython.core.display import display
 from IPython.lib.display import Audio
 from pydub import AudioSegment
 
-from secret_keys import *
+from secrets_k import *
 from ut.base import get_now_format, inicia, tardado, json_read, make_folder, json_update
 from ut.io import lista_files_recursiva, fecha_mod, get_filename, txt_read, txt_write
 from ut.plots import plot_hist
@@ -72,12 +72,10 @@ genera un título de 3 palabras con las palabras más representivas del texto
     else:
         ejj2 = ejj[~ejj.index.isin([x.lower() for x in l_authors])]
 
-    ejj2['value'] = ejj2['value'].astype(int)
-
     if with_openAI:
         # convert to dict las primeras 20 filas {indice:value}
         di = ejj2.iloc[:20].to_dict()['value']
-        res = genera_titulo_openAI(di)
+        res = [genera_titulo_openAI(di)]
     else:
         res = pick(ejj2, 15, 3, 'value')  # esto es una lista de 3 palabras, el 15
 
@@ -88,13 +86,29 @@ def genera_titulo_openAI(di):
     """
 genera un título con la API de OpenAI
     """
-    prompt=''' 
+    prompt = ''' 
     Quiera que me generaras un título de libro, no más de 8 palabras, combinando con sentido las palabras que te daré, considerando su peso
     ###
     '''
     import openai
-    # las keys y contraseñas se 
+    # las keys y contraseñas se
     openai.api_key = OPENAI_API_KEY
+
+    print('** Generando título con OpenAI')
+    messages = [{'role': 'system', 'content': prompt}, {'role': 'user', 'content': json.dumps(di)}]
+
+    response = openai.ChatCompletion.create(
+        model=GPT_MODEL,
+        temperature=0.9,
+        messages=messages,
+        max_tokens=50,  # maximo de palabras en la respuesta
+        # stop=['###'] # para que no siga generando
+    )
+    res = response.choices[0].message.content
+    # quitamos las comillas si es que las puso
+    res = res.replace('"', '')
+    print('      Título generado: ', res)
+    return res
 
 
 def get_book_data(path):
@@ -107,7 +121,7 @@ def get_book_data(path):
     return {'author': autor, 'title': ti}
 
 
-def get_book_summary(i, files, doc_list, vector_matrix, vocab):
+def get_book_summary(i, files, doc_list, vector_matrix, vocab, openai=False):
     """
 obtiene los autores fake y reales del libro (y título), ademoas de un diccionario con el conteo de las palabras
     :param i:
@@ -127,8 +141,10 @@ obtiene los autores fake y reales del libro (y título), ademoas de un diccionar
     fake_authors = ' '.join(l_authors)
     nombres = list(df_names.index)
 
-    l_title = get_fake_title(vector_matrix, vocab, i, nombres)
+    l_title = get_fake_title(vector_matrix, vocab, i, nombres, with_openAI=openai)
     fake_title = ' '.join(l_title)
+    
+    print(f'  {fake_title} ({di["title"]})')
 
     di["fakeAuthor"] = fake_authors
     di["fakeTitle"] = fake_title
@@ -140,7 +156,7 @@ obtiene los autores fake y reales del libro (y título), ademoas de un diccionar
     return di, d_count
 
 
-def get_fakes(doc_list, files, vector_matrix, vocab, lang):
+def get_fakes(doc_list, files, vector_matrix, vocab, lang, openAI=False):
     """
 genera un diccioario con el titulo, autor, titulo fake y autor fake para los libros de la biblioteca Calibre que se
 han trnasformado en txt en el día más reciente
@@ -155,7 +171,7 @@ han trnasformado en txt en el día más reciente
     di_fakes = {}
     di_counts = {}
     for i in range(len(files)):
-        di_fake, di_count = get_book_summary(i, files, doc_list, vector_matrix, vocab)
+        di_fake, di_count = get_book_summary(i, files, doc_list, vector_matrix, vocab, openAI)
         # print(di_fake)
         di_fake['idioma'] = lang
         di_fakes[i] = di_fake
@@ -690,15 +706,15 @@ pone en cada capítulo la información de la "cancion"
     :param d:
     :param titulo:
     """
-    for i, e in enumerate(capitulos_titles):
+    for i, capi_title in enumerate(capitulos_titles):
         i_ = i + 1
         uu = di_caps[i_]
 
-        uu['song'] = e
+        uu['song'] = capi_title
         uu['album'] = d['fakeTitle']
         uu['singer'] = d['fakeAuthor']
         uu['path_cover'] = 'data_out/_images/hi/' + titulo + '.jpg'
-        uu['mp3_name'] = str(i_).zfill(2) + ' - ' + e + '.mp3'
+        uu['mp3_name'] = str(i_).zfill(2) + ' - ' + capi_title + '.mp3'
         uu['language'] = d['idioma']
 
 
