@@ -8,12 +8,12 @@ from IPython.core.display import display
 from IPython.lib.display import Audio
 from pydub import AudioSegment
 
-from secrets_k import *
-from ut.base import get_now_format, inicia, tardado, json_read, make_folder, json_update
-from ut.io import lista_files_recursiva, fecha_mod, get_filename, txt_read, txt_write
-from ut.plots import plot_hist
-from ut.text import divide_texto_en_dos, number_to_text
-from ut.textmining import get_candidatos_nombres_all, pick
+from conf.secrets_k import *
+from utils_base import get_now_format, inicia, tardado, json_read, make_folder, json_update
+from utils_io import lista_files_recursiva, fecha_mod, get_filename, txt_read, txt_write
+from utils_plots import plot_hist
+from utils_text import divide_texto_en_dos, number_to_text
+from utils_textmining import get_candidatos_nombres_all, pick
 
 SAMPLE_EN = 'The monitor lady smiled very nicely and tousled his hair and said, "Andrew, I suppose by now you\'re just absolutely sick of having that horrid monitor. Well, I have good news for you. That monitor is '
 
@@ -21,7 +21,7 @@ SAMPLE_ES = 'Formalmente, desde el Acuerdo Marco "Aurora" de 1953, los centros p
             '"trabajar en plena colaboración académica y humana, compartiendo los avances tanto en conocimientos ' \
             'fundamentales como en técnicas.'
 
-SUMMARIES_JSON = 'data/summaries.json'
+SUMMARIES_JSON = 'data_med/summaries.json'
 CONTENT_JSON = 'capitulos.json'
 
 
@@ -143,7 +143,7 @@ obtiene los autores fake y reales del libro (y título), ademoas de un diccionar
 
     l_title = get_fake_title(vector_matrix, vocab, i, nombres, with_openAI=openai)
     fake_title = ' '.join(l_title)
-    
+
     print(f'  {fake_title} ({di["title"]})')
 
     di["fakeAuthor"] = fake_authors
@@ -536,6 +536,8 @@ def get_final_parrfs(df, LIM):
 
 
 def audio_save(au, name, path, mp3=True, show=False, tag=None, save_mp3=True):
+    print(
+        f' in audio_save, params: name: {name}, path: {path}, mp3: {mp3}, show: {show}, tag: {tag}, save_mp3: {save_mp3}')
     tem = 'temp.wav'
     wa = None
     if mp3:
@@ -562,6 +564,8 @@ def audio_save(au, name, path, mp3=True, show=False, tag=None, save_mp3=True):
     if show:
         display(au)
 
+    print(' saliendo de audio_save')
+
     return wa
 
 
@@ -581,9 +585,10 @@ def speakers_test(model, put_accent=True, sample_rate=48000, put_yo=True,
                                 put_yo=put_yo
                                 )
         au = Audio(audio, rate=sample_rate)
-
+        print(f'** {sp} **')
+        display(au)
         tag = {'title': 'Voice Test: ' + sp, 'artist': sp}
-        audio_save(au, 'test_' + sp, 'data_out/wav/', show=True, tag=tag)
+        # audio_save(au, 'test_' + sp, 'data_out/wav/', show=True, tag=tag)
 
 
 def lee(model,
@@ -619,40 +624,63 @@ convierte los numero en un texto en strings con los números en palabras
         new_string = new_string.replace(key, value)
     return new_string
 
+### ############## WAV GENERATOR ####################
+
 
 def wav_generator(txt, voz, i_cap, path, model, write_txt=True,
                   sample_rate=48000, put_accent=True, put_yo=True, n_caps='?', i_capitulo='?', lan='en', save_mp3=True):
+
+    params = {'voz': voz, 'i_cap': i_cap, 'path': path, 'model': model, 'write_txt': write_txt,
+              'sample_rate': sample_rate, 'put_accent': put_accent, 'put_yo': put_yo, 'n_caps': n_caps, 'i_capitulo': i_capitulo, 'lan': lan, 'save_mp3': save_mp3}
+
+    aug_seg = wav_genertor_general(txt, 'SILERO', **params)
+
+
+def wav_genertor_general(txt, motor, **kwargs):
+
     t = inicia(' capsula = {}/{}. Capitulo:{}'.format(i_cap, n_caps, i_capitulo))
-    print(txt[0:30])
+    print(f'Utilizamos el motor {motor} para leer el texto: {txt[:100]}')
 
     name = str(i_cap).zfill(4) + '_' + voz
-
     mp_ = path + name + '.mp3'
+
     if os.path.isfile(mp_):
         print('*ya existe la parte {}. La saltamos '.format(mp_))
         au_seg = AudioSegment.from_mp3(mp_)
     else:
-        try:
-            audio = model.apply_tts(text=reemplaza_nums(txt, lan),
-                                    speaker=voz,
-                                    sample_rate=sample_rate,
-                                    put_accent=put_accent,
-                                    put_yo=put_yo
-                                    )
-            au = Audio(audio, rate=sample_rate)
-            au_seg = audio_save(au, name, path, save_mp3=save_mp3)
-        except Exception as e:
-            # tipicamente ocurre porque es muy largo, así que lo hacemos en dos partes y juntamos
-            print('** ERROR: ' + str(e))
-            txt1, txt2 = divide_texto_en_dos(txt)
-            au1 = wav_generator(txt1, voz, str(i_cap) + '_a', path, model, save_mp3=False)
-            au2 = wav_generator(txt1, voz, str(i_cap) + '_b', path, model, save_mp3=False)
-            au_seg = au1 + au2
-
+        if motor == 'SILERO':
+            res = wav_generator_silero(txt, **kwargs)
+        elif motor == 'GOOGLE':
+            res = wav_generator_google(txt, **kwargs)
+        elif motor == 'AZURE':
+            res = wav_generator_azure(txt, **kwargs)
     if write_txt:
         txt_write(path + '/' + name, txt)
 
     tardado(t)
+
+    return res
+
+
+def wav_generator_silero(txt, voz, i_cap, path, model, write_txt=True,
+                         sample_rate=48000, put_accent=True, put_yo=True, n_caps='?', i_capitulo='?', lan='en', save_mp3=True):
+
+    try:
+        audio = model.apply_tts(text=reemplaza_nums(txt, lan),
+                                speaker=voz,
+                                sample_rate=sample_rate,
+                                put_accent=put_accent,
+                                put_yo=put_yo
+                                )
+        au = Audio(audio, rate=sample_rate)
+        au_seg = audio_save(au, name, path, save_mp3=save_mp3)
+    except Exception as e:
+        # tipicamente ocurre porque es muy largo, así que lo hacemos en dos partes y juntamos
+        print('** ERROR: ' + str(e))
+        txt1, txt2 = divide_texto_en_dos(txt)
+        au1 = wav_generator(txt1, voz, str(i_cap) + '_a', path, model, save_mp3=False)
+        au2 = wav_generator(txt1, voz, str(i_cap) + '_b', path, model, save_mp3=False)
+        au_seg = au1 + au2
 
     return au_seg
 
@@ -796,6 +824,7 @@ def get_book_datas(pat):
     '''
     from PIL import Image
     d_summaries = json_read(SUMMARIES_JSON)
+    
     titles = sorted(list(d_summaries.keys()))
     matches = [x for x in titles if pat in x]
     if len(matches) > 0:
@@ -805,8 +834,14 @@ def get_book_datas(pat):
         return None, None, None, None
     print(titulo)
     d_summary = d_summaries[titulo]
-    texto = txt_read(d_summary['path'])
-    im = Image.open(get_image_path(d_summary['path']))
+    path=d_summary['path']
+    texto = txt_read(path)
+    image_path=get_image_path(path)
+    try:
+        im = Image.open(image_path)
+    except:
+        print('No se pudo abrir la imagen "{}"'.format(image_path))
+        im = None
 
     return texto, im, titulo, d_summary
 

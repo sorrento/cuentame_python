@@ -1,10 +1,19 @@
 
 ## Files
+- `00 Audiobook`: 
 - `01 Preprocess`
 - `02 Preprocess summary`
 - `03 Audiobook`
 
-# Audiobooks
+# 1. Libros para Cuéntame
+
+0. Cargar los libros en `Calibre` (unos 20)
+   a. Ordenarlos por fecha, y convertirlos a txt
+   b. Buscarles las carátulas y actualizar los metadatos    
+1. Ejecutar el notebook `01 Preprocess` para 
+   a. Con la opción `b` se muestran los recién cargados (la última fecha)
+
+# 2. Audiobooks
 
 Para creación se audiobooks en mp3
 1. Transformar a txt en **Calibre**
