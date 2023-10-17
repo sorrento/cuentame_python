@@ -1,4 +1,5 @@
 def crop(img, f, sx, sy):
+    from IPython.display import display
     width, height = img.size
 
     # Setting the points for cropped image

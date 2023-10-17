@@ -4,3 +4,5 @@
 conf
 .idea
 data_med/
+.gitignore
+data_med/summaries.json
