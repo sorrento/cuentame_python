@@ -23,3 +23,11 @@ Para creación se audiobooks en mp3
    2. Los números de las cápsulas donde cortar (No hace falta cortar)
 4. Ejecutar del notebook `02 Preprocess_summary` para obtener la carátula 
 5. Ejecutar `03 Auidiobook`
+
+# TODO:
+- quitar lo de los dicionarios (especialemente en summari.json)
+- que summary sea un yaml
+- por qué se pone feo el nombre del libroo en summary
+
+# nota:
+ para subir mas rápido as capsulas lo hacemos ppor mongo (batch), por eso hay que borrarlas por mongo

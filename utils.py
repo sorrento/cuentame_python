@@ -16,13 +16,390 @@ from utils_text import divide_texto_en_dos, number_to_text
 from utils_textmining import get_candidatos_nombres_all, pick
 
 SAMPLE_EN = 'The monitor lady smiled very nicely and tousled his hair and said, "Andrew, I suppose by now you\'re just absolutely sick of having that horrid monitor. Well, I have good news for you. That monitor is '
-
 SAMPLE_ES = 'Formalmente, desde el Acuerdo Marco "Aurora" de 1953, los centros pertenecientes a la red mundial debían ' \
             '"trabajar en plena colaboración académica y humana, compartiendo los avances tanto en conocimientos ' \
             'fundamentales como en técnicas.'
 
 SUMMARIES_JSON = 'data_med/summaries.json'
 CONTENT_JSON = 'capitulos.json'
+
+########### PRINCIPALES ####################
+
+
+def get_books(path):
+    files, _ = seleccion_txt(path)
+    doc_list = [txt_read(x) for x in files]
+    return doc_list, files
+
+
+def get_fakes(doc_list, files, vector_matrix, vocab, lang, openAI=False):
+    """
+genera un diccioario con el titulo, autor, titulo fake y autor fake para los libros de la biblioteca Calibre que se
+han trnasformado en txt en el día más reciente
+    :param vocab:
+    :param vector_matrix:
+    :param files:
+    :param doc_list:
+    :return:
+    """
+    t = inicia('Get fakes')
+
+    di_fakes = {}
+    di_counts = {}
+    for i in range(len(files)):
+        di_fake, di_count = get_book_summary(i, files, doc_list, vector_matrix, vocab, openAI)
+        # print(di_fake)
+        di_fake['idioma'] = lang
+        di_fakes[i] = di_fake
+        di_counts[i] = di_count
+
+    tardado(t)
+
+    return di_fakes, di_counts
+
+
+def get_book_datas(pat):
+    '''
+    Devuelve el texto, la imagen, el título y el diccionario de summary, que lo
+    :param pat: patrón de búsqueda
+    :return: texto, im, titulo, d_summary
+
+    '''
+    from PIL import Image
+    d_summaries = json_read(SUMMARIES_JSON)
+
+    titles = sorted(list(d_summaries.keys()))
+    matches = [x for x in titles if pat in x]
+    if len(matches) > 0:
+        titulo = matches[0]
+    else:
+        print('No hay matches en \n{}'.format(titles))
+        return None, None, None, None
+    print(titulo)
+    d_summary = d_summaries[titulo]
+    path = d_summary['path']
+    texto = txt_read(path)
+    image_path = get_image_path(path)
+    try:
+        im = Image.open(image_path)
+    except:
+        print('No se pudo abrir la imagen "{}"'.format(image_path))
+        im = None
+
+    return texto, im, titulo, d_summary
+
+
+def cabeza_y_cola(texto, n_row=100):
+    """
+muestra el principio y el final, para que podamos a ojo ver dónde empieza y termina realmente el libro
+    :param texto:
+    :param n_row: cuantas filas muestra
+    :return:
+    """
+    from IPython.core.display import display
+    partes, df = divide_texto(texto, r'\n')
+
+    pd.set_option('display.width', 10)
+    pd.set_option('display.max_colwidth', 150)
+    pd.set_option('display.max_rows', 300)
+
+    display(df.tail(n_row))
+    display(df.head(n_row))
+
+    return partes, df
+
+
+def corta(partes, df, ini, fin):
+    """
+corta el df y la lista con las partes usando los índices encontrados
+    :param partes:
+    :param df:
+    :param ini:
+    :param fin:
+    :return:
+    """
+    df = df[(df.index >= ini) & (df.index <= fin)].reset_index(drop=True)
+    partes = [partes[x] for x in range(ini, fin + 1)]
+    return partes, df
+
+
+def crea_capsulas(partes, df, lmin=1000, lmax=1500, verbose=True):
+    """
+iva uniendo las partes hasta juntarlas en capsulas de tamaño entre lmin y lmax. El resultado es un diccionario
+que tiene 'ies' (las i que une) y 'texto'. la key es índice de grupo g que parte en 1
+    :param partes:
+    :param df:
+    :param lmin:
+    :param lmax:
+    :return:
+    """
+    grupos = []  # lista de a qué grupo pertenece la fila del df
+    largos = []  # almacena los largos de las capsulas creadas
+    n_acc = 0  # acumulado de la suma de largos en la iteración
+    g = 1  # id de grupo
+    d = {}  # diccionario final que se entregará
+
+    for i in range(len(df)):
+        r = df.iloc[i]
+        n_new = r.len
+
+        n_fut = n_acc + n_new
+        if verbose:
+            print('*****', i)
+            print('******* nacc={} nnew={} nfut={}'.format(n_acc, n_new, n_fut))
+
+        q_cortos = n_fut <= lmin
+        q_largos = n_fut > lmax
+
+        if q_cortos:
+            #         print('  **cortos', n_fut)
+            agg(grupos, g, d, i, partes)
+            n_acc = n_fut
+        elif q_largos:
+            print('  ** >> pasamos', n_fut)
+            delta_abajo = lmin - n_acc
+            delta_arriba = n_fut - lmax
+            print('delta abajo: {}, delta arriba {} nacc {}  nnew{} nfut {}'.format(delta_abajo, delta_arriba, n_acc,
+                                                                                    n_new, n_fut))
+            if delta_abajo < delta_arriba:
+                print('>>preferimos quedarnos cortos')
+                g, n_acc = agrega(grupos, largos, g, n_acc, i, d, partes)
+                n_acc = n_new
+            else:
+                print('>>> preferimos pasarnos', n_fut)
+                g, n_acc = agrega(grupos, largos, g, n_fut, i, d, partes)
+
+        else:
+            if verbose:
+                print('***caemos dentro:', n_fut)
+            g, n_acc = agrega(grupos, largos, g, n_fut, i, d, partes)
+
+    df['capsula'] = grupos
+    if verbose:
+        plot_hist(largos, 45)
+
+    return d
+
+########### PARSE ####################
+
+
+def get_all_books_summaries():
+    """
+    Trae todos los libros de la base de datos de resúmenes haciendo la paginación
+    """
+    limit = 300  # número de libros a traer cada vez
+    skip = 0  # número de libros a saltar
+    hay_mas = True
+
+    url = "https://parseapi.back4app.com/classes/librosSum"
+    header = get_parse_headers()
+    condicion = '{"libroId":{"$exists":true}}'
+
+    def trae(limit, skip):
+        params = {'where': condicion, 'limit': limit, 'skip': skip}
+        data = requests.get(url, headers=header, params=params)
+        # si la respuesta es distinta de 200, hay un error
+        if data.status_code != 200:
+            raise (f'Error {data.status_code} en la llamada a la API')
+        return data.json()['results']
+
+    i = 1
+    libros = []
+    while hay_mas:
+        print(f'iteración {i}')
+        data = trae(limit, skip)
+        if len(data) == 0:
+            hay_mas = False
+        else:
+            print
+            skip += limit
+            libros += data
+            i += 1
+    # params = {'where': condicion, 'limit': 100, 'skip': 200}
+    # data = requests.get(url, headers=header, params=params)
+    print(f'Hemos terminado. Hay {len(libros)} libros')
+    return libros
+
+
+class Biblioteca:
+    def __init__(self) -> None:
+        self.data = get_all_books_summaries()
+
+    def get_ids(self):
+        return sorted([x.get('libroId') for x in self.data])
+
+    def borra_libro(self, libroId):
+        print('No implementado (borra_libro)')
+
+    def get_titulos(self):
+        """
+        Tuplas id, titulo
+        """
+        return [(x.get('libroId'), x.get('title')) for x in self.data]
+
+    def get_next_id_available(self):
+        if len(self.candidatos_id) == 0:
+            print('No hay más ids disponibles')
+            return None
+        # cogemos el más pequeño de los candidatos y lo borramos de la lista
+        id = min(self.candidatos_id)
+        self.candidatos_id.remove(id)
+        return id
+
+    def save_locally(self):
+        import yaml
+        with open('data_med/biblio.yml', 'w') as outfile:
+            yaml.dump(self.data, outfile, default_flow_style=False)
+        # diccionario simplificado {libroId: {title, author}}
+        print(f'** Guardado en data_med/biblio.yml')
+
+        d_simple = {v['libroId']: {'title': v['title'], 'author': v['author']} for v in self.data}
+        d_simple
+        with open('data_med/biblio_simple.yml', 'w') as outfile:
+            yaml.dump(d_simple, outfile, default_flow_style=False)
+        print(f'** Guardado en data_med/biblio_simple.yml')
+
+        # como csv
+        df = pd.DataFrame.from_dict(d_simple, orient='index')
+        df = df.sort_index()
+        df.to_csv('data_med/biblio_simple.csv')
+        print(f'** Guardado en data_med/biblio_simple.csv')
+
+
+def get_ids_disponibles():
+    biblio = Biblioteca()
+    ids = biblio.get_ids()
+    all_ids = range(1, max(ids)+1)
+    huecos = [x for x in all_ids if x not in ids]
+    # agregamos los 30 siguientes al mayor
+    huecos += range(max(ids)+1, max(ids)+30)
+    return huecos
+
+
+def get_next_id_available():
+    ids = get_ids_disponibles()
+    print(f'El siguiente id disponible es {min(ids)}')
+    return min(ids)
+
+
+def upload_lib_summary(j):
+    url = "https://parseapi.back4app.com/classes/librosSum/"
+
+    j.pop('path')
+    j.pop('listo')
+    j.pop('i')
+    # también names, min, max
+    j.pop('names')
+    j.pop('min')
+    j.pop('max')
+
+    libroId = j['libroId']
+    title = j['title']
+    print(f'** Subiendo libro {libroId} {title}')
+    v = str(j).replace('\'', '\"').encode('utf-8')
+    header = get_parse_headers()
+    data = requests.post(url, data=v, headers=header)
+
+    print(data.json())
+
+
+def get_parse_headers():
+    return {
+        'X-Parse-Application-Id': X_PARSE_APPLICATION_ID,
+        'X-Parse-REST-API-Key':   X_PARSE_REST_API_KEY,
+        'Content-Type':           'application/json'
+    }
+
+
+def update_status(objectId):
+    url = "https://parseapi.back4app.com/classes/WordCorpus/" + objectId
+    payload = {'status': True}
+    header = get_parse_headers()
+    response = requests.put(url, data=json.dumps(payload), headers=header)
+    print(response.text)
+    return response.status_code
+
+
+class Back4App:
+    def get_sentance(self):
+        header = get_parse_headers()
+        url = "https://parseapi.back4app.com/classes/WordCorpus?where=%7B%22status%22%3Afalse%7D"
+        data = requests.get(url, headers=header)
+        print(data)
+        json_response = data.json()
+        print(json_response)
+        results = json_response['results'][0]
+        # for i in results['meaning']:
+        # print(i)
+
+        sentence = ("சொல் : %s \n பொருள் : %s" %
+                    (results['word'], results['meaning']))
+        update_status(results['objectId'])
+        tags = "\n#தினமொரு #தமிழ்_சொல்"
+        return sentence + tags
+
+# buscamos el object id
+
+
+def get_object_id(libroId):
+    import yaml
+    with open('data_med/biblio.yml', 'r', encoding='utf-8') as f:
+        biblio = yaml.load(f, Loader=yaml.FullLoader)
+
+    # buscamos el objectId del que tiene libroId=id_borrar
+    for x in biblio:
+        if x['libroId'] == libroId:
+            return (x['objectId'])
+
+    print(f'No se encontró libroId={libroId}')
+
+
+def borrar_de_summary(id_borrar):
+    from utils import get_parse_headers, get_object_id
+    import requests
+    headers = get_parse_headers()
+    obj_id = get_object_id(id_borrar)
+
+    url = 'https://parseapi.back4app.com/classes/librosSum/'
+    url = url + obj_id
+    headers = headers
+    r = requests.delete(url, headers=headers)
+    print(r.status_code)
+
+
+def borrar_batch_capsulas(id_borrar):
+    # borramos masivamente las capsulas de 'libros'
+    # 1. traemos el campo 'objectId' de la tabla 'libros' de los que tienen 'nLibro' = id_borrar
+    import requests
+    from utils import get_parse_headers
+    url = 'https://parseapi.back4app.com/classes/libros/'
+
+    headers = get_parse_headers()
+    conditions = '{"nLibro":'+str(id_borrar)+'}'
+    params = {'where': conditions}  # , 'keys': 'objectId'}
+    r = requests.get(url, headers=headers, params=params)
+
+    results = r.json()['results']
+    len(results)
+    print(f'Hay {len(results)} capsulas con nLibro={id_borrar}')
+    lista = []
+    for x in results:
+        lista.append({'method': 'DELETE', 'path': '/1/classes/libros/'+x['objectId']})
+    # Los datos deben estar bajo la clave 'requests', y su valor debe ser la lista de operaciones.
+    data = {'requests': lista}
+
+    url = 'https://parseapi.back4app.com/batch'
+    # url= 'https://api.parse.com/1/batch'
+    headers = get_parse_headers()
+    r = requests.post(url, headers=headers, json=data)
+    r.status_code
+    if r.status_code == 200:
+        print('Borrado masivo de libros exitoso')
+    else:
+        print('Error en borrado masivo de libros')
+        print(r.json())
+
+########### OTRAS ####################
 
 
 def seleccion_txt(path, fecha=None):
@@ -82,35 +459,6 @@ genera un título de 3 palabras con las palabras más representivas del texto
     return res
 
 
-def genera_titulo_openAI(di):
-    """
-genera un título con la API de OpenAI
-    """
-    prompt = ''' 
-    Quiera que me generaras un título de libro, no más de 8 palabras, combinando con sentido las palabras que te daré, considerando su peso
-    ###
-    '''
-    import openai
-    # las keys y contraseñas se
-    openai.api_key = OPENAI_API_KEY
-
-    print('** Generando título con OpenAI')
-    messages = [{'role': 'system', 'content': prompt}, {'role': 'user', 'content': json.dumps(di)}]
-
-    response = openai.ChatCompletion.create(
-        model=GPT_MODEL,
-        temperature=0.9,
-        messages=messages,
-        max_tokens=50,  # maximo de palabras en la respuesta
-        # stop=['###'] # para que no siga generando
-    )
-    res = response.choices[0].message.content
-    # quitamos las comillas si es que las puso
-    res = res.replace('"', '')
-    print('      Título generado: ', res)
-    return res
-
-
 def get_book_data(path):
     import re
     partes = re.split(r'[/\\]', path)
@@ -154,38 +502,6 @@ obtiene los autores fake y reales del libro (y título), ademoas de un diccionar
     di['names'] = nombres
 
     return di, d_count
-
-
-def get_fakes(doc_list, files, vector_matrix, vocab, lang, openAI=False):
-    """
-genera un diccioario con el titulo, autor, titulo fake y autor fake para los libros de la biblioteca Calibre que se
-han trnasformado en txt en el día más reciente
-    :param vocab:
-    :param vector_matrix:
-    :param files:
-    :param doc_list:
-    :return:
-    """
-    t = inicia('Get fakes')
-
-    di_fakes = {}
-    di_counts = {}
-    for i in range(len(files)):
-        di_fake, di_count = get_book_summary(i, files, doc_list, vector_matrix, vocab, openAI)
-        # print(di_fake)
-        di_fake['idioma'] = lang
-        di_fakes[i] = di_fake
-        di_counts[i] = di_count
-
-    tardado(t)
-
-    return di_fakes, di_counts
-
-
-def get_books(path):
-    files, _ = seleccion_txt(path)
-    doc_list = [txt_read(x) for x in files]
-    return doc_list, files
 
 
 def get_frecuencia_words(di_counts):
@@ -261,26 +577,6 @@ quita de un df de conteo de palabras, aquellas que en realidad son números
     return res
 
 
-def cabeza_y_cola(texto, n_row=100):
-    """
-muestra el principio y el final, para que podamos a ojo ver dónde empieza y termina realmente el libro
-    :param texto:
-    :param n_row: cuantas filas muestra
-    :return:
-    """
-    from IPython.core.display import display
-    partes, df = divide_texto(texto, r'\n')
-
-    pd.set_option('display.width', 10)
-    pd.set_option('display.max_colwidth', 150)
-    pd.set_option('display.max_rows', 300)
-
-    display(df.tail(n_row))
-    display(df.head(n_row))
-
-    return partes, df
-
-
 def divide_texto(texto, pat):
     """
 Separa el texto en cada apaarición del patrón.
@@ -292,20 +588,6 @@ Separa el texto en cada apaarición del patrón.
     partes = [x for x in re.split(pat, texto) if x != '']
     df = pd.DataFrame({'i': range(len(partes)), 'parte': partes}).set_index('i')
     df['len'] = df.parte.map(len)
-    return partes, df
-
-
-def corta(partes, df, ini, fin):
-    """
-corta el df y la lista con las partes usando los índices encontrados
-    :param partes:
-    :param df:
-    :param ini:
-    :param fin:
-    :return:
-    """
-    df = df[(df.index >= ini) & (df.index <= fin)].reset_index(drop=True)
-    partes = [partes[x] for x in range(ini, fin + 1)]
     return partes, df
 
 
@@ -330,64 +612,6 @@ def agg(l, g, d, i, partes):
     else:
         d[g] = {'ies': [i]}
         d[g]['texto'] = [partes[i]]
-
-
-def crea_capsulas(partes, df, lmin=1000, lmax=1500, verbose=True):
-    """
-iva uniendo las partes hasta juntarlas en capsulas de tamaño entre lmin y lmax. El resultado es un diccionario
-que tiene 'ies' (las i que une) y 'texto'. la key es índice de grupo g que parte en 1
-    :param partes:
-    :param df:
-    :param lmin:
-    :param lmax:
-    :return:
-    """
-    grupos = []  # lista de a qué grupo pertenece la fila del df
-    largos = []  # almacena los largos de las capsulas creadas
-    n_acc = 0  # acumulado de la suma de largos en la iteración
-    g = 1  # id de grupo
-    d = {}  # diccionario final que se entregará
-
-    for i in range(len(df)):
-        r = df.iloc[i]
-        n_new = r.len
-
-        n_fut = n_acc + n_new
-        if verbose:
-            print('*****', i)
-            print('******* nacc={} nnew={} nfut={}'.format(n_acc, n_new, n_fut))
-
-        q_cortos = n_fut <= lmin
-        q_largos = n_fut > lmax
-
-        if q_cortos:
-            #         print('  **cortos', n_fut)
-            agg(grupos, g, d, i, partes)
-            n_acc = n_fut
-        elif q_largos:
-            print('  ** >> pasamos', n_fut)
-            delta_abajo = lmin - n_acc
-            delta_arriba = n_fut - lmax
-            print('delta abajo: {}, delta arriba {} nacc {}  nnew{} nfut {}'.format(delta_abajo, delta_arriba, n_acc,
-                                                                                    n_new, n_fut))
-            if delta_abajo < delta_arriba:
-                print('>>preferimos quedarnos cortos')
-                g, n_acc = agrega(grupos, largos, g, n_acc, i, d, partes)
-                n_acc = n_new
-            else:
-                print('>>> preferimos pasarnos', n_fut)
-                g, n_acc = agrega(grupos, largos, g, n_fut, i, d, partes)
-
-        else:
-            if verbose:
-                print('***caemos dentro:', n_fut)
-            g, n_acc = agrega(grupos, largos, g, n_fut, i, d, partes)
-
-    df['capsula'] = grupos
-    if verbose:
-        plot_hist(largos, 45)
-
-    return d
 
 
 def crea_capsulas_max(partes, df, lmax=1000, verbose=True):
@@ -442,56 +666,6 @@ def get_image_path(file):
     return '/'.join(oo)
 
 
-def get_headers():
-    return {
-        'X-Parse-Application-Id': X_PARSE_APPLICATION_ID,
-        'X-Parse-REST-API-Key':   X_PARSE_REST_API_KEY,
-        'Content-Type':           'application/json'
-    }
-
-
-def update_status(objectId):
-    url = "https://parseapi.back4app.com/classes/WordCorpus/" + objectId
-    payload = {'status': True}
-    header = get_headers()
-    response = requests.put(url, data=json.dumps(payload), headers=header)
-    print(response.text)
-    return response.status_code
-
-
-class Back4App:
-    def get_sentance(self):
-        header = get_headers()
-        url = "https://parseapi.back4app.com/classes/WordCorpus?where=%7B%22status%22%3Afalse%7D"
-        data = requests.get(url, headers=header)
-        print(data)
-        json_response = data.json()
-        print(json_response)
-        results = json_response['results'][0]
-        # for i in results['meaning']:
-        # print(i)
-
-        sentence = ("சொல் : %s \n பொருள் : %s" %
-                    (results['word'], results['meaning']))
-        update_status(results['objectId'])
-        tags = "\n#தினமொரு #தமிழ்_சொல்"
-        return sentence + tags
-
-
-def upload_lib_summary(j):
-    url = "https://parseapi.back4app.com/classes/librosSum/"
-
-    j.pop('path')
-    j.pop('listo')
-    j.pop('i')
-
-    v = str(j).replace('\'', '\"').encode('utf-8')
-    header = get_headers()
-    data = requests.post(url, data=v, headers=header)
-
-    print(data.json())
-
-
 def rompe_parrafo(la, lim):
     partes, df = divide_texto(la, r'\. ')
     dd = crea_capsulas_max(partes, df, lmax=lim, verbose=False)
@@ -533,76 +707,6 @@ def get_final_parrfs(df, LIM):
     partes = final.parte.to_list()
 
     return final, partes
-
-
-def audio_save(au, name, path, mp3=True, show=False, tag=None, save_mp3=True):
-    print(
-        f' in audio_save, params: name: {name}, path: {path}, mp3: {mp3}, show: {show}, tag: {tag}, save_mp3: {save_mp3}')
-    tem = 'temp.wav'
-    wa = None
-    if mp3:
-        ext = '.mp3'
-    else:
-        ext = '.wav'
-
-    no = path + '/' + name + ext
-    print(' ** Guardando ', no)
-
-    if mp3:
-        with open(tem, 'wb') as f:
-            f.write(au.data)
-
-        wa = AudioSegment.from_wav(tem)
-        # wa.export(no, format="mp3", tags=tag).close()
-        if save_mp3:
-            wa.export(no, format="mp3").close()
-        os.remove(tem)
-    else:
-        with open(no, 'wb') as f:
-            f.write(au.data)
-
-    if show:
-        display(au)
-
-    print(' saliendo de audio_save')
-
-    return wa
-
-
-def speakers_test(model, put_accent=True, sample_rate=48000, put_yo=True,
-                  txt='Formalmente, desde el Acuerdo Marco "Aurora" de 1953, los centros pertenecientes a la red '
-                      'mundial debían "trabajar en plena colaboración académica y humana, compartiendo los avances '
-                      'tanto en conocimientos fundamentales como en técnicas.',
-                      lan='es'):
-    print(txt)
-    sps = [x for x in model.speakers if x != 'random']
-    for sp in sps:
-        # print(sp)
-        audio = model.apply_tts(text=reemplaza_nums(txt, lan='es'),
-                                speaker=sp,
-                                sample_rate=sample_rate,
-                                put_accent=put_accent,
-                                put_yo=put_yo
-                                )
-        au = Audio(audio, rate=sample_rate)
-        print(f'** {sp} **')
-        display(au)
-        tag = {'title': 'Voice Test: ' + sp, 'artist': sp}
-        # audio_save(au, 'test_' + sp, 'data_out/wav/', show=True, tag=tag)
-
-
-def lee(model,
-        txt=SAMPLE_ES, speaker='es_1', sample_rate=48000, put_accent=True, put_yo=True,
-        lan='en'):
-    audio = model.apply_tts(text=reemplaza_nums(txt, lan),
-                            speaker=speaker,
-                            sample_rate=sample_rate,
-                            put_accent=put_accent,
-                            put_yo=put_yo
-                            )
-    au = Audio(audio, rate=sample_rate)
-    # guarda_wav(au, 'te_' + sp)
-    return au
 
 
 def reemplaza_nums(new_string, lan):
@@ -685,6 +789,133 @@ def wav_generator_silero(txt, voz, i_cap, path, model, write_txt=True,
     return au_seg
 
 
+def audio_save(au, name, path, mp3=True, show=False, tag=None, save_mp3=True):
+    print(
+        f' in audio_save, params: name: {name}, path: {path}, mp3: {mp3}, show: {show}, tag: {tag}, save_mp3: {save_mp3}')
+    tem = 'temp.wav'
+    wa = None
+    if mp3:
+        ext = '.mp3'
+    else:
+        ext = '.wav'
+
+    no = path + '/' + name + ext
+    print(' ** Guardando ', no)
+
+    if mp3:
+        with open(tem, 'wb') as f:
+            f.write(au.data)
+
+        wa = AudioSegment.from_wav(tem)
+        # wa.export(no, format="mp3", tags=tag).close()
+        if save_mp3:
+            wa.export(no, format="mp3").close()
+        os.remove(tem)
+    else:
+        with open(no, 'wb') as f:
+            f.write(au.data)
+
+    if show:
+        display(au)
+
+    print(' saliendo de audio_save')
+
+    return wa
+
+
+def speakers_test(model, put_accent=True, sample_rate=48000, put_yo=True,
+                  txt='Formalmente, desde el Acuerdo Marco "Aurora" de 1953, los centros pertenecientes a la red '
+                      'mundial debían "trabajar en plena colaboración académica y humana, compartiendo los avances '
+                      'tanto en conocimientos fundamentales como en técnicas.',
+                      lan='es'):
+    print(txt)
+    sps = [x for x in model.speakers if x != 'random']
+    for sp in sps:
+        # print(sp)
+        audio = model.apply_tts(text=reemplaza_nums(txt, lan='es'),
+                                speaker=sp,
+                                sample_rate=sample_rate,
+                                put_accent=put_accent,
+                                put_yo=put_yo
+                                )
+        au = Audio(audio, rate=sample_rate)
+        print(f'** {sp} **')
+        display(au)
+        tag = {'title': 'Voice Test: ' + sp, 'artist': sp}
+        # audio_save(au, 'test_' + sp, 'data_out/wav/', show=True, tag=tag)
+
+
+def lee(model,
+        txt=SAMPLE_ES, speaker='es_1', sample_rate=48000, put_accent=True, put_yo=True,
+        lan='en'):
+    audio = model.apply_tts(text=reemplaza_nums(txt, lan),
+                            speaker=speaker,
+                            sample_rate=sample_rate,
+                            put_accent=put_accent,
+                            put_yo=put_yo
+                            )
+    au = Audio(audio, rate=sample_rate)
+    # guarda_wav(au, 'te_' + sp)
+    return au
+
+
+def sample_speaker(model, d):
+    if d['idioma'] == 'ES':
+        txt = SAMPLE_ES[:200]
+    else:
+        txt = SAMPLE_EN
+    return lee(model, txt, speaker=d['speaker'])
+
+
+def test_voices_en(model, lista=None, d_capitulos=None, n=4, avoid=None, text=None):
+    if text is None:
+        txt = d_capitulos['1']['capsulas'][0][:230] if (d_capitulos is not None) else SAMPLE_EN
+    else:
+        txt = text[:230]
+    print(txt)
+
+    if lista is None:
+        import random
+        all_ = model.speakers
+        if avoid is None:
+            available = all_
+        else:
+            available = list(set(all_) - set(avoid))
+        lista = random.sample(available, k=n)
+
+    for vo in lista:
+        print(vo)
+        display(lee(model, txt, speaker=vo))
+
+    return lista
+
+
+def get_mp3_tag(d_capitulo, i_capitulo, titulo):
+    tag = {'title':       str(i_capitulo) + ' ' + d_capitulo['song'],
+           'artist':      d_capitulo['singer'],
+           'album':       d_capitulo['album'],
+           'Track':       i_capitulo,
+           'Genre':       'Ebook',
+
+           # estos los identifica el picard
+           'Date':        '07/07/2021',
+           'Subtitle':    'subtitulo',
+           'language':    d_capitulo['language'],
+           'Comment':     'comm',
+
+           'year':        '2023',
+           'Description': 'DESCIPTION',
+           'releasetime': '07/07/2021',
+           'origyear':    '07/07/2021'
+           }
+
+    pa = 'data_out/_images/hi/{}.jpg'.format(titulo)
+
+    return tag, pa
+
+########### OTHERS ####################
+
+
 def get_largo_capitulos(ll, n_caps=25):
     """
  distribución de cápsulas por capítulo
@@ -746,30 +977,6 @@ pone en cada capítulo la información de la "cancion"
         uu['language'] = d['idioma']
 
 
-def get_mp3_tag(d_capitulo, i_capitulo, titulo):
-    tag = {'title':       str(i_capitulo) + ' ' + d_capitulo['song'],
-           'artist':      d_capitulo['singer'],
-           'album':       d_capitulo['album'],
-           'Track':       i_capitulo,
-           'Genre':       'Ebook',
-
-           # estos los identifica el picard
-           'Date':        '07/07/2021',
-           'Subtitle':    'subtitulo',
-           'language':    d_capitulo['language'],
-           'Comment':     'comm',
-
-           'year':        '2023',
-           'Description': 'DESCIPTION',
-           'releasetime': '07/07/2021',
-           'origyear':    '07/07/2021'
-           }
-
-    pa = 'data_out/_images/hi/{}.jpg'.format(titulo)
-
-    return tag, pa
-
-
 def procesa_capitulo(d_capitulos, i_capitulo, titulo, path_book, model, speaker,
                      debug_mode=False, speakers=None, lan='en'):
     import time
@@ -815,70 +1022,126 @@ def procesa_capitulo(d_capitulos, i_capitulo, titulo, path_book, model, speaker,
     json_update({i_capitulo: d_capitulo}, path_json)
 
 
-def get_book_datas(pat):
-    '''
-    Devuelve el texto, la imagen, el título y el diccionario de summary, que lo
-    :param pat: patrón de búsqueda
-    :return: texto, im, titulo, d_summary
-
-    '''
-    from PIL import Image
-    d_summaries = json_read(SUMMARIES_JSON)
-    
-    titles = sorted(list(d_summaries.keys()))
-    matches = [x for x in titles if pat in x]
-    if len(matches) > 0:
-        titulo = matches[0]
-    else:
-        print('No hay matches en \n{}'.format(titles))
-        return None, None, None, None
-    print(titulo)
-    d_summary = d_summaries[titulo]
-    path=d_summary['path']
-    texto = txt_read(path)
-    image_path=get_image_path(path)
-    try:
-        im = Image.open(image_path)
-    except:
-        print('No se pudo abrir la imagen "{}"'.format(image_path))
-        im = None
-
-    return texto, im, titulo, d_summary
-
-
-def sample_speaker(model, d):
-    if d['idioma'] == 'ES':
-        txt = SAMPLE_ES[:200]
-    else:
-        txt = SAMPLE_EN
-    return lee(model, txt, speaker=d['speaker'])
-
-
-def test_voices_en(model, lista=None, d_capitulos=None, n=4, avoid=None, text=None):
-    if text is None:
-        txt = d_capitulos['1']['capsulas'][0][:230] if (d_capitulos is not None) else SAMPLE_EN
-    else:
-        txt = text[:230]
-    print(txt)
-
-    if lista is None:
-        import random
-        all_ = model.speakers
-        if avoid is None:
-            available = all_
-        else:
-            available = list(set(all_) - set(avoid))
-        lista = random.sample(available, k=n)
-
-    for vo in lista:
-        print(vo)
-        display(lee(model, txt, speaker=vo))
-
-    return lista
-
-
 def elige_libros_aleatorios(n,
                             ruta_libros=r"c:\Users\milen\Desktop\del drive\NYT Best Sellers/"):
     import random
     lista_libros = lista_files_recursiva(ruta_libros, 'epub', recursiv=True)
     return random.sample(lista_libros, n)
+
+################## IA ####################
+
+
+def genera_titulo_openAI(di):
+    """
+genera un título con la API de OpenAI
+    """
+    prompt = ''' 
+    Quiera que me generaras un título de libro, no más de 8 palabras, combinando con sentido las palabras que te daré, considerando su peso
+    ###
+    '''
+    import openai
+    # las keys y contraseñas se
+    openai.api_key = OPENAI_API_KEY
+
+    print('** Generando título con OpenAI')
+    messages = [{'role': 'system', 'content': prompt}, {'role': 'user', 'content': json.dumps(di)}]
+
+    response = openai.ChatCompletion.create(
+        model=GPT_MODEL,
+        temperature=0.9,
+        messages=messages,
+        max_tokens=50,  # maximo de palabras en la respuesta
+        # stop=['###'] # para que no siga generando
+    )
+    res = response.choices[0].message.content
+    # quitamos las comillas si es que las puso
+    res = res.replace('"', '')
+    print('      Título generado: ', res)
+    return res
+
+
+def detecta_ini(texto, nrow=50):
+
+    import re
+    from utils_chat import haz
+    partes, df = divide_texto(texto, r'\n')
+
+    df_ini = df.head(nrow)
+
+    txt = ''
+    for i in range(nrow):
+        txt += str(i) + ' | ' + df_ini.loc[i, 'parte'][:50]+'...\n'
+
+    prompt = f"""
+    Te daré las primeras palabras de cada párrafo de un libro y su número correlativo. 
+    Quiero que me digas en qué número de párrafo empieza la sección principal de libro.
+    Muchas veces tiene como título con algo como "Capítulo 1" o "parte primera " o "I".
+    No me interesan las secciones de introducción, índices, prefacios, prólogos, etc.
+    Dame sólo el número entre triple comillas y que me digas el título de sección que has identificado (como "Parte I")
+    Ejemplo: ```12```
+
+    ### Inicio de párrafos
+
+    {txt}
+    """
+    r = haz(prompt)
+    print(f'{r}')
+    # Extraemos lo que está entre triple comillas
+    ini = int(re.findall(r'```(.*)```', r)[0])
+    # mostramos el párrafo previo, el elegido y el siguiente
+    for i in range(ini - 1, ini + 2):
+        print(str(i) + ' | ' + df.loc[i, 'parte'][:70] + '...')
+
+    return ini
+
+
+def detecta_fin(texto, i_chunk, nrow=50):
+
+    import re
+    from utils_chat import haz
+    partes, df = divide_texto(texto, r'\n')
+    if i_chunk == -1:
+        df_chunk = df[-nrow:]
+    else:
+        df_chunk = df[i_chunk*nrow:(i_chunk+1)*nrow]  # si i_chunk=-1, df_chunk=df[-50:0],
+
+    print(f' Cogemos los índices {df_chunk.index[0]} a {df_chunk.index[-1]}')
+    # print(df_chunk)
+    txt = ''
+    # recoremos las filas de df_chunk
+    for j, row in df_chunk.iterrows():
+        # print(f'i: {i}')
+        # j = row.index
+        # print(f'j: {j}')
+        # txt += str(j) + ' | ' + df_end.loc[j, 'parte'][:30]+'...\n'
+        txt += str(j) + ' | ' + row.parte[:30] + '...\n'
+
+    prompt = f"""
+    Te daré las primeras palabras de cada párrafo del final de un libro y sus número correlativo. 
+    Quiero que me digas en qué número de párrafo empiezan secciones que no son parte de la historia.
+    Las reconocerás por el título como referencias, agradecimientos, postlogo, notas, etc.
+    Quiero que entregues el nombre se la sección encontrada y el número de párrafo. 
+    El número debe estar entre comillas triples.
+    
+    Ejemplo: <titulo>, nº ```12```
+
+    ### Párrafos finales
+
+    {txt}
+    """
+    print(prompt)
+    r = haz(prompt, max_tokens=10, temp=0.1)
+    # Extraemos lo que está entre triple comillas
+    print(f'Respuesta: [{r}]')
+    fin = int(re.findall(r'```(.*)```', r)[0])
+
+    # si el fin es igual al largo del libro, devolvemos -1
+    if fin == len(df)-1:
+        print('El fin es el último párrafo')
+        return -1
+
+    # mostramos el párrafo previo, el elegido y el siguiente
+    for i in range(fin - 1, fin + 2):
+        print(str(i) + ' | ' + df.loc[i, 'parte'][:70] + '...')
+
+    return fin
