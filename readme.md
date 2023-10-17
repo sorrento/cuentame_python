@@ -28,6 +28,7 @@ Para creación se audiobooks en mp3
 - quitar lo de los dicionarios (especialemente en summari.json)
 - que summary sea un yaml
 - por qué se pone feo el nombre del libroo en summary
+   - quitar los paréntesis
 
 # nota:
  para subir mas rápido as capsulas lo hacemos ppor mongo (batch), por eso hay que borrarlas por mongo
