@@ -902,7 +902,10 @@ def test_voices_en(model, lista=None, d_capitulos=None, n=4, avoid=None, text=No
     return lista
 
 
-def get_mp3_tag(d_capitulo, i_capitulo, titulo):
+def get_mp3_tag(d_capitulo, i_capitulo):
+    """
+genera el tag para el mp3
+    """
     tag = {'title':       str(i_capitulo) + ' ' + d_capitulo['song'],
            'artist':      d_capitulo['singer'],
            'album':       d_capitulo['album'],
@@ -921,7 +924,7 @@ def get_mp3_tag(d_capitulo, i_capitulo, titulo):
            'origyear':    '07/07/2021'
            }
 
-    pa = 'data_out/_images/hi/{}.jpg'.format(titulo)
+    pa = d_capitulo['path_cover']
 
     return tag, pa
 
@@ -1022,7 +1025,7 @@ def procesa_capitulo(d_capitulos, i_capitulo, titulo, path_book, model, speaker,
                                    n_caps=str(n_caps), i_capitulo=i_capitulo, lan=lan)
         print(str(k))
         display(au_capsula)
-        au_acc = au_acc + au_capsula + AudioSegment.silent(450)
+        au_acc = au_acc + au_capsula + AudioSegment.silent(450) # esto es para que haya un silencio entre capsulas
 
     name_ = path_mp3 + d_capitulo['mp3_name']
     print('** Exportando el final a {}'.format(name_))
