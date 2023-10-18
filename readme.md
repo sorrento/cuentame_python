@@ -1,3 +1,8 @@
+# Glosario
+
+- **Cápsula**: Fragmento de división de la app. Es en torno a 1000 caracteres
+- **Capítulo**: Fragmento de división de audio. Se forman para que sean 25 en cada libro
+
 
 ## Files
 - `00 Audiobook`: 
@@ -29,6 +34,9 @@ Para creación se audiobooks en mp3
 - que summary sea un yaml
 - por qué se pone feo el nombre del libroo en summary
    - quitar los paréntesis
+- entender por qué guardo "names" en summary
+- guardar las cápsulas en yaml separado por libro, para poder usar como audiobook
+- hacer con Azure
 
 # nota:
  para subir mas rápido as capsulas lo hacemos ppor mongo (batch), por eso hay que borrarlas por mongo

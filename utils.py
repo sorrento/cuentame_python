@@ -20,8 +20,8 @@ SAMPLE_ES = 'Formalmente, desde el Acuerdo Marco "Aurora" de 1953, los centros p
             '"trabajar en plena colaboración académica y humana, compartiendo los avances tanto en conocimientos ' \
             'fundamentales como en técnicas.'
 
-SUMMARIES_JSON = 'data_med/summaries.json'
-CONTENT_JSON = 'capitulos.json'
+SUMMARIES_YAML = 'data_med/summaries.yml'
+CONTENT_YAML = 'capitulos.yml'
 
 ########### PRINCIPALES ####################
 
@@ -57,6 +57,11 @@ han trnasformado en txt en el día más reciente
 
     return di_fakes, di_counts
 
+def read_summaries():
+    import yaml
+    with open(SUMMARIES_YAML, 'r', encoding='utf-8') as f:
+        d_summaries = yaml.load(f, Loader=yaml.FullLoader)
+    return d_summaries
 
 def get_book_datas(pat):
     '''
@@ -66,7 +71,7 @@ def get_book_datas(pat):
 
     '''
     from PIL import Image
-    d_summaries = json_read(SUMMARIES_JSON)
+    d_summaries = read_summaries()
 
     titles = sorted(list(d_summaries.keys()))
     matches = [x for x in titles if pat in x]
@@ -86,6 +91,7 @@ def get_book_datas(pat):
         print('No se pudo abrir la imagen "{}"'.format(image_path))
         im = None
 
+    print(f'** El libro "{titulo}" tiene {len(texto)} caracteres')
     return texto, im, titulo, d_summary
 
 
@@ -697,7 +703,13 @@ def get_parrafos(titu):
     return df
 
 
-def get_final_parrfs(df, LIM):
+def get_final_parrafos(df, LIM):
+    """
+    rompe los párrafos largos en trozos de tamaño LIM
+    :param df:
+    :param LIM:
+
+    """
     ies = df[df.len > LIM].i.to_list()
     df_base = df[~df.i.isin(ies)]
     rotos = [rompe_parr(df, i, LIM) for i in ies]
@@ -944,6 +956,9 @@ def get_df_capitulos(caps):
 
 
 def get_dic_capitulos(df_caps):
+    """
+genera un diccionario con la info de los capítulos
+    """
     key = 'capsulas'
     dd = {}
     for i, r in df_caps.iterrows():
