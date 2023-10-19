@@ -2,6 +2,26 @@ from utils_base import win_exe
 from utils_io import files_remove
 import yaml
 
+voices_azure = ['es-CL-CatalinaNeural',
+                'es-CL-LorenzoNeural',
+                'es-ES-AlvaroNeural',
+                'es-ES-ElviraNeural',
+                'es-ES-HelenaNeural',
+                'es-ES-AbrilNeural',
+                'es-ES-ArnauNeural',
+                'es-ES-DarioNeural',
+                'es-ES-EliasNeural',
+                'es-ES-EstrellaNeural',
+                'es-ES-IreneNeural',
+                'es-ES-LaiaNeural',
+                'es-ES-LiaNeural',
+                'es-ES-NilNeural',
+                'es-ES-SaulNeural',
+                'es-ES-TeoNeural',
+                'es-ES-TrianaNeural',
+                'es-ES-VeraNeural'
+                ]
+
 
 def wav2mp3(titulo):
     path = 'data_out/wav/%s' % titulo
@@ -60,7 +80,63 @@ def tts_google(texto, filename, voice_name, gender='F'):
     registra_tts_uso(filename, texto, 'google')
 
 
+def tts_azure(texto, filename, voice_name):
+
+    # pip install azure-cognitiveservices-speech
+
+    from azure.cognitiveservices.speech import SpeechConfig, SpeechSynthesizer, AudioConfig, ResultReason, CancellationReason
+    from conf.secrets_key import TOKEN_AZURE_SPEECH
+    # se encuentra en el portal de azure, en la cuenta de vozPrimera
+    region = 'westeurope'
+    speech_config = SpeechConfig(subscription=TOKEN_AZURE_SPEECH, region=region)
+    speech_config.speech_synthesis_voice_name = voice_name
+    # audio_config = AudioOutputConfig(use_default_speaker=True)
+
+    audio_output = AudioConfig(filename=filename)
+
+    # Crea un sintetizador de voz con la configuración de voz y audio.
+    speech_synthesizer = SpeechSynthesizer(speech_config=speech_config, audio_config=audio_output)
+
+    # Sintetiza el texto en un archivo de audio sin reproducirlo.
+    speech_synthesis_result = speech_synthesizer.speak_text_async(texto).get()
+
+    if speech_synthesis_result.reason == ResultReason.SynthesizingAudioCompleted:
+        print(f"Se ha sintetizado el habla para el texto [{texto}] y se ha guardado en {filename}")
+    elif speech_synthesis_result.reason == ResultReason.Canceled:
+        cancellation_details = speech_synthesis_result.cancellation_details
+        print("Se canceló la síntesis de voz: {}".format(cancellation_details.reason))
+        if cancellation_details.reason == CancellationReason.Error:
+            if cancellation_details.error_details:
+                print("Detalles del error: {}".format(cancellation_details.error_details))
+                print("¿Configuraste correctamente la clave de recurso de voz y los valores de la región?")
+
+
+def genera_presentacion(voice):
+    # genera un texto, por ejemplo:
+    #  voice='es-ES-AlvaroNeural' -> hola, soy alvaro, de España
+    txt = f'Hola, soy {voice.split("-")[2]}, de '
+    pais = voice.split("-")[1]
+    if pais == 'ES':
+        pais = 'España'
+    elif pais == 'CL':
+        pais = 'Chile'
+    txt += pais
+    return txt
+
+
+def azure_samples():
+    for voice in voices_azure:
+        filename = f'data_out/azure/{voice}.mp3'
+        texto = genera_presentacion(voice)
+        tts_azure(texto, filename, voice)
+
+
 def registra_tts_uso(filename, texto, motor):
+    """
+    Registra el uso de los tts en un archivo yaml, para sabber cuántos caracteres hemos usado en el mes
+    Google tiene un límite gratis de 1M
+    Azure tiene un límite gratis de 0.5M
+    """
     import datetime
     import os
     n = len(texto)
