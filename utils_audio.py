@@ -80,13 +80,23 @@ def tts_google(texto, filename, voice_name, gender='F'):
     registra_tts_uso(filename, texto, 'google')
 
 
-def tts_azure(texto, filename, voice_name):
+def get_random_voice_azure():
+    import random
+    voice_name = random.choice(voices_azure)
+    return voice_name
+
+
+def tts_azure(texto, filename, voice_name=None):
 
     # pip install azure-cognitiveservices-speech
 
     from azure.cognitiveservices.speech import SpeechConfig, SpeechSynthesizer, AudioConfig, ResultReason, CancellationReason
     from conf.secrets_key import TOKEN_AZURE_SPEECH
-    # se encuentra en el portal de azure, en la cuenta de vozPrimera
+    # si la voz no está definida, elegimos una al azar de la lista
+    if voice_name is None:
+        voice_name = get_random_voice_azure()
+        print(f'No se ha definido la voz, se elige una al azar: {voice_name}')
+
     region = 'westeurope'
     speech_config = SpeechConfig(subscription=TOKEN_AZURE_SPEECH, region=region)
     speech_config.speech_synthesis_voice_name = voice_name
@@ -101,7 +111,8 @@ def tts_azure(texto, filename, voice_name):
     speech_synthesis_result = speech_synthesizer.speak_text_async(texto).get()
 
     if speech_synthesis_result.reason == ResultReason.SynthesizingAudioCompleted:
-        print(f"Se ha sintetizado el habla para el texto [{texto}] y se ha guardado en {filename}")
+        print(f"Se ha sintetizado el habla para el texto [{texto[:30]}] y se ha guardado en {filename}")
+        registra_tts_uso(filename, texto, 'azure')
     elif speech_synthesis_result.reason == ResultReason.Canceled:
         cancellation_details = speech_synthesis_result.cancellation_details
         print("Se canceló la síntesis de voz: {}".format(cancellation_details.reason))
@@ -164,3 +175,31 @@ def registra_tts_uso(filename, texto, motor):
     # guardamos
     with open(path, 'w', encoding='utf8') as outfile:
         yaml.dump(d_total, outfile, default_flow_style=False, allow_unicode=True)
+
+
+def get_audiosegment(mp3_file):
+    """
+    Devuelve un objeto AudioSegment, lo hacemos robusto de manera que si el mp3 tiene problemas con las 
+    cabeceras, lo transforma a wav y lo leemos como segmento
+    """
+    from pydub import AudioSegment
+    import os
+    wav_file = 'temp.wav'
+    if os.path.exists(wav_file):
+        os.remove(wav_file)
+    # abs path
+    wav_file = os.path.join(os.getcwd(), wav_file)
+    mp3_file = os.path.join(os.getcwd(), mp3_file)
+    
+    print(f'*** Segmento de audio: {mp3_file}   ***')
+    try:
+        audio = AudioSegment.from_mp3(mp3_file)
+        print('   OK')        
+    except Exception as e:
+
+        print('   Como WAw')
+        cmd = f'ffmpeg -i "{mp3_file}" "{wav_file}"'
+        win_exe(cmd)
+        audio = AudioSegment.from_wav(wav_file)
+
+    return audio

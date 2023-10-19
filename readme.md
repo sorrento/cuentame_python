@@ -30,13 +30,14 @@ Para creación se audiobooks en mp3
 5. Ejecutar `03 Audiobook`
 
 # TODO:
+- **OJO** que los mp3s generados por azure tienen problemas para leerse (de la cabecera) con audiosegment. Intentar cambiar el formato de salida
+- que el nombre del mp3 no tenga ':', ya que no se puede llamar así
 - quitar lo de los dicionarios (especialemente en summari.json)
 - que summary sea un yaml
 - por qué se pone feo el nombre del libroo en summary
    - quitar los paréntesis
 - entender por qué guardo "names" en summary
 - guardar las cápsulas en yaml separado por libro, para poder usar como audiobook
-- hacer con Azure
 
 # nota:
  para subir mas rápido as capsulas lo hacemos ppor mongo (batch), por eso hay que borrarlas por mongo
